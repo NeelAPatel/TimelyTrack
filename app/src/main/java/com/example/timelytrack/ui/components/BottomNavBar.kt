@@ -1,5 +1,6 @@
 package com.example.timelytrack.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
@@ -24,6 +25,7 @@ import com.example.timelytrack.ui.profile.ProfileScreen
 import com.example.timelytrack.viewmodel.LogViewModel
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BottomNavBar( logViewModel: LogViewModel, navController: NavHostController = rememberNavController()
 ) {

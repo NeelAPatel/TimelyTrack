@@ -14,8 +14,11 @@ class LogViewModel : ViewModel() {
 
     fun completeLastLogEntry() {
         logEntries.lastOrNull()?.let { lastLog ->
-            lastLog.endTimestamp = System.currentTimeMillis()
-            logEntries[logEntries.lastIndex] = lastLog
+
+            val updatedLog = lastLog.copy(
+                endTimestamp = System.currentTimeMillis()
+            )
+            logEntries[logEntries.lastIndex] = updatedLog
         }
     }
 }
