@@ -14,11 +14,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+//            val windowSizeClass = calculateWindowSizeClass(this)
             MaterialTheme {
                 Surface {
                     val logViewModel: LogViewModel = viewModel()
                     val navController = rememberNavController()
-                    BottomNavBar(navController = navController, logViewModel = logViewModel)
+                    BottomNavBar(navController = navController, logViewModel = logViewModel  /*, windowSizeClass = windowSizeClass*/)
                 }
             }
         }

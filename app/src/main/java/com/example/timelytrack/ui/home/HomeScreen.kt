@@ -28,10 +28,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.timelytrack.viewmodel.LogViewModel
 
-
 @ExperimentalFoundationApi
 @Composable
 fun HomeScreen(viewModel: LogViewModel) {
+
+    val context = LocalContext.current
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
         floatingActionButton = {
@@ -69,7 +70,10 @@ fun HomeScreen(viewModel: LogViewModel) {
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
-                    text = { Text("New Log") }
+                    text = { Text("New Log") },
+
+
+
                 )
             }
         }
@@ -79,11 +83,11 @@ fun HomeScreen(viewModel: LogViewModel) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(padding)
+//            ,            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             items(viewModel.logEntries) { log ->
-                LogEntryItem(log)
+                ListViewItem(logEntry = log)
             }
         }
     }
