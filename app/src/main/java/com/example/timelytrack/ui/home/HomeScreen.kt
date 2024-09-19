@@ -51,14 +51,6 @@ fun HomeScreen(viewModel: LogViewModel) {
                     containerColor = MaterialTheme.colorScheme.onPrimary,
                     contentColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(48.dp)
-//                        .combinedClickable(
-//                            onClick = { viewModel.addLogEntry() },
-//                            onLongClick = {
-//                                scope.launch {
-//                                    Toast.makeText(context, "Complete last ongoing log", Toast.LENGTH_SHORT).show()
-//                                }
-//                            }
-//                        )
                 ) {
                     Icon(Icons.Filled.Check, contentDescription = "Complete current log")
                 }
@@ -84,7 +76,6 @@ fun HomeScreen(viewModel: LogViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-//            ,            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             items(viewModel.logEntries) { log ->
                 ListViewItem(logEntry = log)
