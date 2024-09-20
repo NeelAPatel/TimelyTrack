@@ -1,41 +1,14 @@
 package com.example.timelytrack.ui.home
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.Text
 import android.annotation.SuppressLint
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import com.example.timelytrack.model.LogEntry
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,9 +28,18 @@ fun ListViewItem(logEntry: LogEntry) {
         "--"
     }
 
+
+
     Column {
         ListItem(
             headlineContent = {
+//                Row(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    horizontalArrangement = Arrangement.SpaceBetween
+//                ) {
+//                    Text(text = dateFormat.format(Date(logEntry.startTimestamp)), fontWeight = FontWeight.Bold)
+//                }
+
                 Text(text = dateFormat.format(Date(logEntry.startTimestamp)))
             },
             supportingContent = {
@@ -78,6 +60,12 @@ fun ListViewItem(logEntry: LogEntry) {
         HorizontalDivider()
     }
 }
+
+
+
+
+
+
 //fun ListViewItem(logEntry: LogEntry) {
 //    val dateFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 //
