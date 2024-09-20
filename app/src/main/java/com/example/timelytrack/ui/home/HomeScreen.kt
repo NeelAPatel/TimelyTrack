@@ -87,13 +87,12 @@ fun HomeScreen(viewModel: LogViewModel) {
                 // --- Added StickyHeader for each date group ---
                 stickyHeader {
                     ListStickyHeader(date=date, logs=logs)
-                   
+
                 }
 
                 // --- Display logs for the current date group ---
                 items(logs) { log ->
                     ListViewItem(logEntry = log)
-//                    Divider()
                 }
             }
         }
