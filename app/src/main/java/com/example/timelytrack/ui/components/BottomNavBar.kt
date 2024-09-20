@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,6 +25,13 @@ import com.example.timelytrack.ui.home.HomeScreen
 import com.example.timelytrack.ui.profile.ProfileScreen
 import com.example.timelytrack.viewmodel.LogViewModel
 
+@Preview(showBackground = true)
+@Composable
+fun BottomNavigationBarPreview() {
+    val navController = rememberNavController()
+    BottomBarComponent(navController)
+}
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -31,46 +39,7 @@ fun BottomNavBar( logViewModel: LogViewModel, navController: NavHostController =
 ) {
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-
-                NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-                    label = { Text("Home") },
-                    selected = currentRoute == "home",
-                    onClick = {
-                        navController.navigate("home") {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-
-                NavigationBarItem(
-                    icon = { Icon(Icons.Filled.History, contentDescription = "History") },
-                    label = { Text("History") },
-                    selected = currentRoute == "history",
-                    onClick = {
-                        navController.navigate("history") {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-
-                NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
-                    label = { Text("Profile") },
-                    selected = currentRoute == "profile",
-                    onClick = {
-                        navController.navigate("profile") {
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
+            BottomBarComponent(navController = navController)
         }
     ) { innerPadding ->
         NavHost(navController, startDestination = "home", modifier = Modifier.padding(innerPadding)) {
@@ -81,11 +50,50 @@ fun BottomNavBar( logViewModel: LogViewModel, navController: NavHostController =
     }
 }
 
-//
-//// Data class for navigation items
-//data class NavigationItem(
-//    val route: String,
-//    val label: String,
-//    val icon: ImageVector,
-//    val content: @Composable (paddingValues: PaddingValues) -> Unit
-//)
+
+
+
+@Composable
+fun BottomBarComponent(navController: NavHostController) {
+    NavigationBar {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
+            label = { Text("Home") },
+            selected = currentRoute == "home",
+            onClick = {
+                navController.navigate("home") {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            })
+
+
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.History, contentDescription = "History") },
+            label = { Text("History") },
+            selected = currentRoute == "history",
+            onClick = {
+                navController.navigate("history") {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        )
+
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
+            label = { Text("Profile") },
+            selected = currentRoute == "profile",
+            onClick = {
+                navController.navigate("profile") {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        )
+        // ... (rest of your NavigationBarItems)
+    }
+}
