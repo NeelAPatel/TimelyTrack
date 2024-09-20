@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.timelytrack.model.LogEntry
 import com.example.timelytrack.viewmodel.LogViewModel
@@ -30,52 +31,68 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
+@OptIn(ExperimentalFoundationApi::class)
+@Preview(showBackground = true)
+@Composable
+fun FABComponentPreview() {
+    val viewModel = LogViewModel()
+    FABComponent(viewModel = viewModel)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    val viewModel = LogViewModel()
+    HomeScreen(viewModel)
+}
+
+
+
+@ExperimentalFoundationApi
+@Composable
+fun FABComponent(viewModel: LogViewModel){
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(end = 16.dp, bottom = 16.dp)
+    ) {
+
+        SmallFloatingActionButton(
+            onClick = { viewModel.completeLastLogEntry() },
+            containerColor = MaterialTheme.colorScheme.onPrimary,
+            contentColor = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(48.dp)
+        ) {
+            Icon(Icons.Filled.Check, contentDescription = "Complete current log")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ExtendedFloatingActionButton(
+            onClick = { viewModel.addLogEntry() },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
+            text = { Text("New Log") },
+        )
+    }
+}
+
+
 @ExperimentalFoundationApi
 @Composable
 fun HomeScreen(viewModel: LogViewModel) {
     // --- Added groupedLogs variable to group logs by date ---
     val groupedLogs = groupLogsByDate(viewModel.logEntries)
 
-
-//    val context = LocalContext.current
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
         floatingActionButton = {
-            Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(end = 16.dp, bottom = 16.dp)
-                ) {
-
-//                val context = LocalContext.current
-//                val scope = rememberCoroutineScope()
-
-
-                SmallFloatingActionButton(
-                    onClick = { viewModel.completeLastLogEntry() },
-                    containerColor = MaterialTheme.colorScheme.onPrimary,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(Icons.Filled.Check, contentDescription = "Complete current log")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.addLogEntry() },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
-                    text = { Text("New Log") },
-
-
-
-                )
-            }
+            FABComponent(viewModel = viewModel)
         }
     ) {
-
         padding ->
         LazyColumn(
             modifier = Modifier
@@ -87,9 +104,7 @@ fun HomeScreen(viewModel: LogViewModel) {
                 // --- Added StickyHeader for each date group ---
                 stickyHeader {
                     ListStickyHeader(date=date, logs=logs)
-
                 }
-
                 // --- Display logs for the current date group ---
                 items(logs) { log ->
                     ListViewItem(logEntry = log)

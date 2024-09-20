@@ -38,11 +38,7 @@ fun ListStickyHeaderPreview() {
 
 @Composable
 fun ListStickyHeader(date: String, logs: List<LogEntry>) {
-//    val date = "Saturday, March 20, 2024"
-//    val logs = listOf(
-//        LogEntry(startTimestamp = 1679289600000, endTimestamp = 1679290200000), // Example logs
-//        LogEntry(startTimestamp = 1679290800000, endTimestamp = 1679291400000)
-//    )
+
 
     Row(
         modifier = Modifier
