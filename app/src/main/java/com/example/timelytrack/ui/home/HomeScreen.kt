@@ -99,7 +99,9 @@ fun FABComponent(viewModel: LogViewModel){
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Debug text for the number of log entries
         Text(viewModel.logEntries.collectAsState().value.size.toString())
+
         ExtendedFloatingActionButton(
             onClick = { viewModel.addLogEntry() },
             containerColor = MaterialTheme.colorScheme.primary,
