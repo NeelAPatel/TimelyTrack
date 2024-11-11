@@ -19,7 +19,7 @@ class LogViewModel : ViewModel() {
     fun addLogEntry() {
 //        logEntries.add(LogEntry(startTimestamp = System.currentTimeMillis()))
 
-        val newEntry = LogEntry(startTimestamp = System.currentTimeMillis())
+        val newEntry = LogEntry(categoryId = "1", startTimestamp = System.currentTimeMillis())
         _logEntries.update { currentEntries -> currentEntries  + newEntry }
 
     }
