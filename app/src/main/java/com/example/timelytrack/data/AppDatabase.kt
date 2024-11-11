@@ -29,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                     .fallbackToDestructiveMigration() // Optional: for simple migration handling
                     .build()
                 INSTANCE = instance // Set the instance to the newly created database
-                instance //
+                instance
             }
         }
     }

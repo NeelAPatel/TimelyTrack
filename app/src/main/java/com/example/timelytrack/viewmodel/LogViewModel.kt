@@ -9,30 +9,20 @@ import kotlinx.coroutines.flow.update
 
 class LogViewModel : ViewModel() {
 
-    private val _logEntries = MutableStateFlow<List<LogEntry>>(emptyList())
-    val logEntries: StateFlow<List<LogEntry>> = _logEntries
-//    var logEntries = mutableStateListOf<LogEntry>()
+    // variables
+    private val _logEntries = MutableStateFlow<List<LogEntry>>(emptyList()) //App will modify Private variable
+    val logEntries: StateFlow<List<LogEntry>> = _logEntries // expose public variable and functions
 
-
-
-    //=== Adds
     fun addLogEntry() {
-//        logEntries.add(LogEntry(startTimestamp = System.currentTimeMillis()))
+        // Create a new log entry and add it to the list
 
         val newEntry = LogEntry(categoryId = "1", startTimestamp = System.currentTimeMillis())
         _logEntries.update { currentEntries -> currentEntries  + newEntry }
-
     }
 
-    // Complete
     fun completeLastLogEntry() {
-//        logEntries.lastOrNull()?.let { lastLog ->
-//
-//            val updatedLog = lastLog.copy(
-//                endTimestamp = System.currentTimeMillis()
-//            )
-//            logEntries[logEntries.lastIndex] = updatedLog
-//        }
+        // Find the last log entry and update its endTimestamp
+        // this is used by the Checkmark button
 
         _logEntries.value.lastOrNull()?.let { lastLog ->
             val updatedLog = lastLog.copy(
@@ -45,12 +35,13 @@ class LogViewModel : ViewModel() {
     }
 
     fun removeLogEntry(logEntry: LogEntry) {
-//        _logEntries.value = _logEntries.value.filterNot { it == logEntry }
+        // Remove a log entry from the list
         _logEntries.update { currentEntries -> currentEntries.filterNot { it == logEntry } }
     }
 
-    //=== Clears all log entries
+
     fun clearLogEntries() {
+        // Clear all log entries from the list
         _logEntries.value = emptyList()
     }
 
