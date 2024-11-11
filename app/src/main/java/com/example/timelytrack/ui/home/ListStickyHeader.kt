@@ -29,8 +29,8 @@ import java.util.Locale
 fun ListStickyHeaderPreview() {
     val date = "Saturday, March 20, 2024"
     val logs = listOf(
-        LogEntry(startTimestamp = 1679289600000, endTimestamp = 1679290200000), // Example logs
-        LogEntry(startTimestamp = 9679290800000, endTimestamp = 1679291400000)
+        LogEntry(categoryId = "1", startTimestamp = 1679289600000, endTimestamp = 1679290200000), // Example logs
+        LogEntry(categoryId = "1", startTimestamp = 9679290800000, endTimestamp = 1679291400000)
     )
     ListStickyHeader(date = date, logs = logs)
 
