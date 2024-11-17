@@ -15,19 +15,18 @@ import kotlinx.coroutines.flow.Flow
 interface LogEntryDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(logEntry: LogEntry)
+    suspend fun insertLogEntry(logEntry: LogEntry)
 
     @Update //(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun update(logEntry: LogEntry)
+    suspend fun updateLogEntry(logEntry: LogEntry)
 
     @Delete //(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun delete(logEntry: LogEntry)
+    suspend fun deleteLogEntry(logEntry: LogEntry)
 
     @Query("SELECT * FROM log_entries WHERE id = :id")
     fun getLogEntryById(id: Long): Flow<LogEntry>?
 
     @Query("SELECT * FROM log_entries")
     fun getAllLogEntries(): Flow<List<LogEntry>>
-
 
 }

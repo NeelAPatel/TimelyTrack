@@ -18,7 +18,7 @@ import java.util.Locale
 @Preview(showBackground = true)
 @Composable
 fun ListViewItemPreview() {
-    val logEntry = LogEntry(id = 0.toString(), categoryId = 1.toString(), startTimestamp = 1679289600000, endTimestamp = 1679290200000)
+    val logEntry = LogEntry(id = 0, categoryId = 1.toString(), startTimestamp = 1679289600000, endTimestamp = 1679290200000)
     ListViewItem(logEntry = logEntry)
 }
 

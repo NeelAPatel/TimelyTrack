@@ -23,7 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.timelytrack.ui.history.HistoryScreen
 import com.example.timelytrack.ui.home.HomeScreen
 import com.example.timelytrack.ui.profile.ProfileScreen
-import com.example.timelytrack.viewmodel.LogViewModel
+//import com.example.timelytrack.viewmodel.LogViewModel
 import com.example.timelytrack.viewmodel.LogViewModel2
 
 @Preview(showBackground = true)
@@ -36,8 +36,8 @@ fun BottomNavigationBarPreview() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BottomNavBar(logViewModel: LogViewModel, navController: NavHostController = rememberNavController()
-//fun BottomNavBar(logViewModel: LogViewModel2, navController: NavHostController = rememberNavController()
+//fun BottomNavBar(logViewModel: LogViewModel, navController: NavHostController = rememberNavController()
+fun BottomNavBar(navController: NavHostController = rememberNavController()
 ) {
     Scaffold(
         bottomBar = {
@@ -45,7 +45,7 @@ fun BottomNavBar(logViewModel: LogViewModel, navController: NavHostController = 
         }
     ) { innerPadding ->
         NavHost(navController, startDestination = "home", modifier = Modifier.padding(innerPadding)) {
-            composable("home") { HomeScreen(viewModel = logViewModel) }
+            composable("home") { HomeScreen() }
             composable("history") { HistoryScreen() }
             composable("profile") { ProfileScreen() }
         }
