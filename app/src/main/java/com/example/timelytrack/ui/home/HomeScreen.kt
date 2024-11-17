@@ -2,137 +2,72 @@
 
 package com.example.timelytrack.ui.home
 
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.DismissDirection
-//import androidx.compose.material.DismissDirection
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.DismissState
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.DismissValue
 import androidx.compose.material.ExperimentalMaterialApi
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.SwipeToDismiss
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.Icons
+//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.rememberDismissState
-//import androidx.compose.material.rememberDismissState
-//import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-//import androidx.compose.material3.rememberDismissState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.timelytrack.TimelyTrackApplication
 import com.example.timelytrack.model.LogEntry
-//import com.example.timelytrack.viewmodel.LogViewModel
-import com.example.timelytrack.viewmodel.LogViewModel2
+import com.example.timelytrack.viewmodel.LogViewModel
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.delay
-
-
-//@OptIn(ExperimentalFoundationApi::class)
-//@Preview(showBackground = true)
-//@Composable
-//fun FABComponentPreview() {
-//    val viewModel = LogViewModel2()
-//    FABComponent(viewModel = viewModel)
-//}
-//
-//@OptIn(ExperimentalFoundationApi::class)
-//@Preview(showBackground = true)
-//@Composable
-//fun HomeScreenPreview() {
-//    val viewModel = LogViewModel2()
-//    HomeScreen(viewModel)
-//}
-
-
-
-@ExperimentalFoundationApi
-@Composable
-fun FABComponent(viewModel: LogViewModel2){
-//fun FABComponent(viewModel: LogViewModel){
-    Column(
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(end = 16.dp, bottom = 16.dp)
-    ) {
-
-        SmallFloatingActionButton(
-            onClick = { viewModel.completeLastLogEntry2() },
-//            onClick = { viewModel.completeLastLogEntry() },
-            containerColor = MaterialTheme.colorScheme.onPrimary,
-            contentColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(Icons.Filled.Check, contentDescription = "Complete current log")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Debug text for the number of log entries
-        Text("Logs backend count: " + viewModel.allLogEntries.collectAsState().value.size.toString())
-
-        ExtendedFloatingActionButton(
-//            onClick = { viewModel.addLogEntry() },
-            onClick = { viewModel.addLogEntry2("1") },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
-            text = { Text("New Log") },
-        )
-    }
-}
-
 
 @ExperimentalFoundationApi
 @Composable
 fun HomeScreen() {
-//fun HomeScreen(viewModel: LogViewModel) {
-    // --- Added groupedLogs variable to group logs by date ---
-    // Access the database instance
-
-    //    TODO("ACCESS LOG ENTRIES FROM DATABASE");
-
-//    val logEntries = viewModel.logEntries.collectAsState()
-    val viewModel: LogViewModel2 = viewModel(factory = LogViewModel2.Factory)
+    val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
     val logEntries = viewModel.allLogEntries.collectAsState()
     val groupedLogs = groupLogsByDate(logEntries)
-
 
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
@@ -153,8 +88,6 @@ fun HomeScreen() {
                     ListStickyHeader(date = date, logs = logs)
                 }
                 // --- Display logs for the current date group ---
-
-
                 items(
                     items = logs,
                     key = { log -> log.id } // Assuming your LogEntry has an 'id' property
@@ -162,8 +95,7 @@ fun HomeScreen() {
                     SwipeToDeleteContainer(
                         item = log,
                         key = log.id, // Pass the key to SwipeToDeleteContainer
-//                        onDelete = { viewModel.removeLogEntry(log) }
-                        onDelete = { viewModel.removeLogEntry2(log) }
+                        onDelete = { viewModel.removeLogEntry(log) }
 
                     ) {
                         ListViewItem(logEntry = it)
@@ -171,6 +103,39 @@ fun HomeScreen() {
                 }
             }
         }
+    }
+}
+
+@ExperimentalFoundationApi
+@Composable
+fun FABComponent(viewModel: LogViewModel){
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(end = 16.dp, bottom = 16.dp)
+    ) {
+
+        SmallFloatingActionButton(
+            onClick = { viewModel.completeLastLogEntry() },
+            containerColor = MaterialTheme.colorScheme.onPrimary,
+            contentColor = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(48.dp)
+        ) {
+            Icon(Icons.Filled.Check, contentDescription = "Complete current log")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Debug text for the number of log entries
+        Text("Logs backend count: " + viewModel.allLogEntries.collectAsState().value.size.toString())
+
+        ExtendedFloatingActionButton(
+            onClick = { viewModel.addLogEntry("1") },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
+            text = { Text("New Log") },
+        )
     }
 }
 
@@ -250,7 +215,6 @@ fun DeleteBackground(
         )
     }
 }
-//ef665d
 // Grouping logs by date
 // --- Added function to group logs by date ---
 fun groupLogsByDate(logEntries: State<List<LogEntry>>): Map<String, List<LogEntry>> {

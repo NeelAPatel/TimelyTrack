@@ -31,11 +31,11 @@ class LogEntryRepository (private val logEntryDao : LogEntryDao) {
         logEntryDao.updateLogEntry(logEntry)
     }
 
-    suspend fun getLogEntryById(id: Long): Flow<LogEntry>? {
+    fun getLogEntryById(id: Long): Flow<LogEntry>? {
         return logEntryDao.getLogEntryById(id)
     }
 
-    suspend fun getAllLogEntries(): Flow<List<LogEntry>> {
+    fun getAllLogEntries(): Flow<List<LogEntry>> {
         return logEntryDao.getAllLogEntries()
     }
 }

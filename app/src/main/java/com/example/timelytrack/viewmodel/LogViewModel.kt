@@ -1,107 +1,126 @@
 package com.example.timelytrack.viewmodel
 
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
-import com.example.timelytrack.model.LogEntry
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import com.example.timelytrack.data.LogEntryDao
-import kotlinx.coroutines.flow.*
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.timelytrack.TimelyTrackApplication
+import com.example.timelytrack.model.LogEntry
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
+import com.example.timelytrack.data.LogEntryRepository
+import kotlinx.coroutines.flow.*
 
 
-class LogViewModel : ViewModel() {
+class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
 
     // variables
-    private val _logEntries = MutableStateFlow<List<LogEntry>>(emptyList()) //App will modify Private variable
-    val logEntries: StateFlow<List<LogEntry>> = _logEntries // expose public variable and functions
+//    private val _logEntries = MutableStateFlow<List<LogEntry>>(emptyList()) //App will modify Private variable
+//    val logEntries: StateFlow<List<LogEntry>> = _logEntries.asStateFlow() // expose public variable and functions
 
-    fun addLogEntry() {
-        // Create a new log entry and add it to the list
+    val allLogEntries: StateFlow<List<LogEntry>> = repository.allItems
 
-        val newEntry = LogEntry(categoryId = "1", startTimestamp = System.currentTimeMillis())
-        _logEntries.update { currentEntries -> currentEntries  + newEntry }
-    }
 
-    fun completeLastLogEntry() {
-        // Find the last log entry and update its endTimestamp
-        // this is used by the Checkmark button
-
-        _logEntries.value.lastOrNull()?.let { lastLog ->
-            val updatedLog = lastLog.copy(
-                endTimestamp = System.currentTimeMillis()
-            )
-            _logEntries.update { currentEntries ->
-                currentEntries.dropLast(1) + updatedLog
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = (this[APPLICATION_KEY] as TimelyTrackApplication)
+                LogViewModel(application.container.logEntryRepository)
             }
         }
     }
 
+    // Function to add a new log entry with the current start timestamp
+    fun addLogEntry(categoryId: String) {
+        val newLogEntry = LogEntry(
+            categoryId = categoryId,
+            startTimestamp = System.currentTimeMillis()
+        )
+        viewModelScope.launch {
+            repository.insertLogEntry(newLogEntry)
+        }
+    }
+
+    // Function to delete a specific log entry by its ID
     fun removeLogEntry(logEntry: LogEntry) {
-        // Remove a log entry from the list
-        _logEntries.update { currentEntries -> currentEntries.filterNot { it == logEntry } }
+        viewModelScope.launch {
+            repository.deleteLogEntry(logEntry)
+        }
     }
 
-
-    fun clearLogEntries() {
-        // Clear all log entries from the list
-        _logEntries.value = emptyList()
+    // Function to complete the latest log entry by setting the end timestamp
+    fun completeLastLogEntry() {
+        viewModelScope.launch {
+            // Get the latest log entry from the database
+            val latestEntry = repository.getAllLogEntries().firstOrNull()?.lastOrNull()
+            latestEntry?.let { entry ->
+                // Update the entry's end timestamp to the current time
+                entry.endTimestamp = System.currentTimeMillis()
+                repository.updateLogEntry(entry)
+            }
+        }
     }
+}
+
+
+//class LogEntryViewModelFactory(private val repository: LogEntryRepository) : ViewModelProvider.Factory {
+//    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+//        if (modelClass.isAssignableFrom(LogViewModel::class.java)) {
+//            @Suppress("UNCHECKED_CAST")
+//            return LogViewModel(repository) as T
+//        }
+//        throw IllegalArgumentException("Unknown ViewModel class")
+//    }
+//}
+//
+
+
+
+//    fun addLogEntry() {
+//        // Create a new log entry and add it to the list
+//
+//        val newEntry = LogEntry(categoryId = "1", startTimestamp = System.currentTimeMillis())
+//        _logEntries.update { currentEntries -> currentEntries  + newEntry }
+//    }
+//
+//    fun completeLastLogEntry() {
+//        // Find the last log entry and update its endTimestamp
+//        // this is used by the Checkmark button
+//
+//        _logEntries.value.lastOrNull()?.let { lastLog ->
+//            val updatedLog = lastLog.copy(
+//                endTimestamp = System.currentTimeMillis()
+//            )
+//            _logEntries.update { currentEntries ->
+//                currentEntries.dropLast(1) + updatedLog
+//            }
+//        }
+//    }
+//
+//    fun removeLogEntry(logEntry: LogEntry) {
+//        // Remove a log entry from the list
+//        _logEntries.update { currentEntries -> currentEntries.filterNot { it == logEntry } }
+//    }
+//
+//
+//    fun clearLogEntries() {
+//        // Clear all log entries from the list
+//        _logEntries.value = emptyList()
+//    }
 
 //    //=== Retrieves a log entry by ID
 //    fun getLogEntryById(id: String): LogEntry? {
 //        return _logEntries.value.find { it.id == id }
 //    }
 
-
-    //=== Removes
-
-    // Remove 1 log
-//    fun removeSelectedLogEntry() {
-//        logEntries.removeLastOrNull()
+//
+//    init {
+//        // Collect entries from the database to keep _logEntries updated
+//        viewModelScope.launch {
+//            repository.getAllLogEntries().collect { entries ->
+//                _logEntries.value = entries
+//            }
+//        }
 //    }
-
-    // Remove multiple selected logs
-//    fun removeSelectedLogEntries() {
-//        logEntries.clear()
-//    }
-
-    // Clear all logs
-//    fun clearAllLogs() {
-//        logEntries.clear()
-//    }
-
-    //=== Edits
-
-    // Edit log entry
-//    fun editLogEntry(index: Int, newLogEntry: LogEntry) {
-//        logEntries[index] = newLogEntry
-//    }
-
-    // Edit log entry category
-//    fun editLogEntryCategory(index: Int, newCategory: String) {
-//        logEntries[index] = logEntries[index].copy(logCategorization = newCategory)
-//    }
-
-    // Edit log entry start time
-//    fun editLogEntryStartTime(index: Int, newStartTime: Long) {
-//        logEntries[index] = logEntries[index].copy(startTimestamp = newStartTime)
-//    }
-
-    // Edit log entry end time
-//    fun editLogEntryEndTime(index: Int, newEndTime: Long) {
-//        logEntries[index] = logEntries[index].copy(endTimestamp = newEndTime)
-//    }
-
-    // Edit log entry activity
-//    fun editLogEntryActivity(index: Int, newActivity: String) {
-//        logEntries[index] = logEntries[index].copy(logActivity = newActivity)
-//    }
-
-
-
-
-}
