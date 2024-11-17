@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.timelytrack.model.LogEntry
+import kotlinx.coroutines.flow.Flow
 
 // Interface for interacting with SQLite database, timelytrack_database, by using these functions to manipulate log entry data in and out of DB
 
@@ -23,10 +24,10 @@ interface LogEntryDao {
     suspend fun delete(logEntry: LogEntry)
 
     @Query("SELECT * FROM log_entries WHERE id = :id")
-    suspend fun getLogEntryById(id: Long): LogEntry?
+    fun getLogEntryById(id: Long): Flow<LogEntry>?
 
     @Query("SELECT * FROM log_entries")
-    suspend fun getAllLogEntries(): List<LogEntry>
+    fun getAllLogEntries(): Flow<List<LogEntry>>
 
 
 }

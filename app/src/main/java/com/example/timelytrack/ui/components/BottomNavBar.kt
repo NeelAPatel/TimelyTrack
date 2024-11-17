@@ -24,6 +24,7 @@ import com.example.timelytrack.ui.history.HistoryScreen
 import com.example.timelytrack.ui.home.HomeScreen
 import com.example.timelytrack.ui.profile.ProfileScreen
 import com.example.timelytrack.viewmodel.LogViewModel
+import com.example.timelytrack.viewmodel.LogViewModel2
 
 @Preview(showBackground = true)
 @Composable
@@ -35,7 +36,8 @@ fun BottomNavigationBarPreview() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BottomNavBar( logViewModel: LogViewModel, navController: NavHostController = rememberNavController()
+fun BottomNavBar(logViewModel: LogViewModel, navController: NavHostController = rememberNavController()
+//fun BottomNavBar(logViewModel: LogViewModel2, navController: NavHostController = rememberNavController()
 ) {
     Scaffold(
         bottomBar = {

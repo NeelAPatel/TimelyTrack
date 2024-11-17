@@ -6,6 +6,12 @@ import com.example.timelytrack.model.LogEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import com.example.timelytrack.data.LogEntryDao
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import java.util.UUID
+
 
 class LogViewModel : ViewModel() {
 

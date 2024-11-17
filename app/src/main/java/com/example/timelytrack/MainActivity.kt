@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.example.timelytrack.ui.components.BottomNavBar
 import com.example.timelytrack.viewmodel.LogViewModel
+import com.example.timelytrack.viewmodel.LogViewModel2
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,6 +19,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 Surface {
                     val logViewModel: LogViewModel = viewModel()
+//                    val logViewModel: LogViewModel2 = viewModel()
                     val navController = rememberNavController()
                     BottomNavBar(navController = navController, logViewModel = logViewModel  /*, windowSizeClass = windowSizeClass*/)
                 }

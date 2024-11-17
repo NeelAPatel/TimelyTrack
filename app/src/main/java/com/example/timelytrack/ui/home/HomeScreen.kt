@@ -53,34 +53,37 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.timelytrack.TimelyTrackApplication
 import com.example.timelytrack.model.LogEntry
 import com.example.timelytrack.viewmodel.LogViewModel
+import com.example.timelytrack.viewmodel.LogViewModel2
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
 
 
-@OptIn(ExperimentalFoundationApi::class)
-@Preview(showBackground = true)
-@Composable
-fun FABComponentPreview() {
-    val viewModel = LogViewModel()
-    FABComponent(viewModel = viewModel)
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Preview(showBackground = true)
-@Composable
-fun HomeScreenPreview() {
-    val viewModel = LogViewModel()
-    HomeScreen(viewModel)
-}
+//@OptIn(ExperimentalFoundationApi::class)
+//@Preview(showBackground = true)
+//@Composable
+//fun FABComponentPreview() {
+//    val viewModel = LogViewModel2()
+//    FABComponent(viewModel = viewModel)
+//}
+//
+//@OptIn(ExperimentalFoundationApi::class)
+//@Preview(showBackground = true)
+//@Composable
+//fun HomeScreenPreview() {
+//    val viewModel = LogViewModel2()
+//    HomeScreen(viewModel)
+//}
 
 
 
 @ExperimentalFoundationApi
 @Composable
+//fun FABComponent(viewModel: LogViewModel2){
 fun FABComponent(viewModel: LogViewModel){
     Column(
         horizontalAlignment = Alignment.End,
@@ -89,6 +92,7 @@ fun FABComponent(viewModel: LogViewModel){
     ) {
 
         SmallFloatingActionButton(
+//            onClick = { viewModel.completeLastLogEntry2() },
             onClick = { viewModel.completeLastLogEntry() },
             containerColor = MaterialTheme.colorScheme.onPrimary,
             contentColor = MaterialTheme.colorScheme.primary,
@@ -104,6 +108,7 @@ fun FABComponent(viewModel: LogViewModel){
 
         ExtendedFloatingActionButton(
             onClick = { viewModel.addLogEntry() },
+//            onClick = { viewModel.addLogEntry2("1") },
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
@@ -115,9 +120,15 @@ fun FABComponent(viewModel: LogViewModel){
 
 @ExperimentalFoundationApi
 @Composable
+//fun HomeScreen(viewModel: LogViewModel2) {
 fun HomeScreen(viewModel: LogViewModel) {
     // --- Added groupedLogs variable to group logs by date ---
-    val groupedLogs = groupLogsByDate(viewModel.logEntries.collectAsState())
+    // Access the database instance
+
+    //    TODO("ACCESS LOG ENTRIES FROM DATABASE");
+
+    val logEntries = viewModel.logEntries.collectAsState()
+    val groupedLogs = groupLogsByDate(logEntries)
 
 
     Scaffold(
@@ -149,6 +160,8 @@ fun HomeScreen(viewModel: LogViewModel) {
                         item = log,
                         key = log.id, // Pass the key to SwipeToDeleteContainer
                         onDelete = { viewModel.removeLogEntry(log) }
+//                                onDelete = { viewModel.removeLogEntry2(log) }
+
                     ) {
                         ListViewItem(logEntry = it)
                     }
