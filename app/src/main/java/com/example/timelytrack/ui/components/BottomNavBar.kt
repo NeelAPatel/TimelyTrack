@@ -23,7 +23,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.timelytrack.ui.history.HistoryScreen
 import com.example.timelytrack.ui.home.HomeScreen
 import com.example.timelytrack.ui.profile.ProfileScreen
-import com.example.timelytrack.viewmodel.LogViewModel
 
 @Preview(showBackground = true)
 @Composable
@@ -35,15 +34,15 @@ fun BottomNavigationBarPreview() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BottomNavBar( logViewModel: LogViewModel, navController: NavHostController = rememberNavController()
-) {
+fun BottomNavBar(navController: NavHostController = rememberNavController()) {
+    // Layouting for the bottom navigation bar
     Scaffold(
         bottomBar = {
             BottomBarComponent(navController = navController)
         }
     ) { innerPadding ->
         NavHost(navController, startDestination = "home", modifier = Modifier.padding(innerPadding)) {
-            composable("home") { HomeScreen(viewModel = logViewModel) }
+            composable("home") { HomeScreen() }
             composable("history") { HistoryScreen() }
             composable("profile") { ProfileScreen() }
         }
@@ -55,6 +54,7 @@ fun BottomNavBar( logViewModel: LogViewModel, navController: NavHostController =
 
 @Composable
 fun BottomBarComponent(navController: NavHostController) {
+    // UI directives for NavigationBarItem
     NavigationBar {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
@@ -68,8 +68,8 @@ fun BottomBarComponent(navController: NavHostController) {
                     launchSingleTop = true
                     restoreState = true
                 }
-            })
-
+            }
+        )
 
         NavigationBarItem(
             icon = { Icon(Icons.Filled.History, contentDescription = "History") },
@@ -82,7 +82,6 @@ fun BottomBarComponent(navController: NavHostController) {
                 }
             }
         )
-
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
             label = { Text("Profile") },
@@ -94,6 +93,5 @@ fun BottomBarComponent(navController: NavHostController) {
                 }
             }
         )
-        // ... (rest of your NavigationBarItems)
     }
 }
