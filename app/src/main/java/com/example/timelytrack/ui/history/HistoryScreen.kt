@@ -1,50 +1,20 @@
 
-@file:Suppress("Deprecation") // b/279939308
-
-
 package com.example.timelytrack.ui.history
 
 //import android.graphics.Color
+
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.DismissDirection.EndToStart
-import androidx.compose.material.DismissDirection.StartToEnd
-import androidx.compose.material.DismissValue.Default
-import androidx.compose.material.DismissValue.DismissedToEnd
-import androidx.compose.material.DismissValue.DismissedToStart
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.FixedThreshold
-import androidx.compose.material.ResistanceConfig
-import androidx.compose.material.SwipeableDefaults.StandardResistanceFactor
-import androidx.compose.material.SwipeableDefaults.StiffResistanceFactor
-import androidx.compose.material.SwipeableState
-import androidx.compose.material.ThresholdConfig
-import androidx.compose.material.swipeable
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlin.math.roundToInt
-import kotlinx.coroutines.CancellationException
-
 
 
 @Preview(showBackground = true)
