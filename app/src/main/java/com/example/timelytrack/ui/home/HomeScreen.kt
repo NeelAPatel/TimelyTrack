@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 //noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.DismissDirection
 //noinspection UsingMaterialAndMaterial3Libraries
@@ -50,7 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +60,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timelytrack.model.LogEntry
 import com.example.timelytrack.viewmodel.LogViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -70,6 +71,20 @@ fun HomeScreen() {
     val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
     val logEntries = viewModel.allLogEntries.collectAsState()
     val groupedLogs = groupLogsByDate(logEntries)
+    val selectedLogEntries by viewModel.selectedLogEntries.collectAsState()
+    val scrollToBottom by viewModel.scrollToBottom.collectAsState()
+
+// Create a LazyListState for controlling the scroll position
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(scrollToBottom, logEntries) {
+        println("Triggered scrollToBottom with logEntries.size = ${logEntries.value.size}")
+        if (scrollToBottom) {
+            listState.animateScrollToItem(logEntries.value.size - 1)
+            println("Scrolled to bottom.")
+            viewModel.clearScrollToBottom()
+        }
+    }
 
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
@@ -79,29 +94,32 @@ fun HomeScreen() {
 
         ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
             // --- Updated to loop through each date group ---
+            // Display grouped logs with headers
             groupedLogs.forEach { (date, logs) ->
-                // --- Added StickyHeader for each date group ---
                 stickyHeader {
-                    ListStickyHeader(date = date, logs = logs)
+                    ListStickyHeader(date = date, logs = logs, onSelectAll = {viewModel.selectAllLogsInGroup(logs)})
                 }
-                // --- Display logs for the current date group ---
                 items(
                     items = logs,
-                    key = { log -> log.id } // Assuming your LogEntry has an 'id' property
-
+                    key = { log -> log.id }  // Unique ID for each log entry
                 ) { log ->
                     SwipeToDeleteContainer(
                         item = log,
-                        key = log.id, // Pass the key to SwipeToDeleteContainer
+                        key = log.id,
                         onDelete = { viewModel.removeLogEntry(log) }
-
                     ) {
-                        ListViewItem(logEntry = it)
+                        ListViewItem(
+                            logEntry = it,
+                            isSelected = log in selectedLogEntries,
+                            onSelect = { viewModel.toggleLogSelection(log) },
+                            onEdit = { /* Show edit bottom sheet */ }
+                        )
                     }
                 }
             }
@@ -181,9 +199,7 @@ fun <T> SwipeToDeleteContainer(
     ) {
         SwipeToDismiss(
             state = state,
-            background = {
-                DeleteBackground(swipeDismissState = state)
-            },
+            background = { DeleteBackground(swipeDismissState = state) },
             dismissContent = { content(item) },
             directions = setOf(DismissDirection.EndToStart)
         )

@@ -17,11 +17,15 @@ import kotlinx.coroutines.flow.*
 class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
 
     // variables
-//    private val _logEntries = MutableStateFlow<List<LogEntry>>(emptyList()) //App will modify Private variable
-//    val logEntries: StateFlow<List<LogEntry>> = _logEntries.asStateFlow() // expose public variable and functions
-
     val allLogEntries: StateFlow<List<LogEntry>> = repository.allItems
 
+    // State for scrolling to the bottom when a new log is added
+    private val _scrollToBottom = MutableStateFlow(false)
+    val scrollToBottom: StateFlow<Boolean> = _scrollToBottom
+
+    // State for selected log entries in multi-select mode
+    private val _selectedLogEntries = MutableStateFlow<Set<LogEntry>>(emptySet())
+    val selectedLogEntries: StateFlow<Set<LogEntry>> = _selectedLogEntries
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
@@ -60,6 +64,33 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
                 entry.endTimestamp = System.currentTimeMillis()
                 repository.updateLogEntry(entry)
             }
+        }
+    }
+
+    // Clears the scroll-to-bottom event after the UI has handled it
+    fun clearScrollToBottom() {
+        _scrollToBottom.value = false
+    }
+
+    // Deletes a set of selected log entries
+    fun removeLogEntries(entries: Set<LogEntry>) {
+        viewModelScope.launch {
+            entries.forEach { repository.deleteLogEntry(it) }
+            _selectedLogEntries.value = emptySet()  // Clear selection after deletion
+        }
+    }
+
+    // Toggles selection for a log entry (used for multi-select)
+    fun toggleLogSelection(logEntry: LogEntry) {
+        _selectedLogEntries.update { selectedEntries ->
+            if (logEntry in selectedEntries) selectedEntries - logEntry else selectedEntries + logEntry
+        }
+    }
+
+    // Selects all logs in a specific group
+    fun selectAllLogsInGroup(groupLogs: List<LogEntry>) {
+        _selectedLogEntries.update { selectedEntries ->
+            selectedEntries + groupLogs
         }
     }
 }

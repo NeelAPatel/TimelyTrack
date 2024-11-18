@@ -1,16 +1,25 @@
 package com.example.timelytrack.ui.home
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.example.timelytrack.model.LogEntry
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -33,10 +42,16 @@ import java.util.Locale
 //    )
 //}
 
+@OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun ListViewItem(logEntry: LogEntry) {
+fun ListViewItem(    logEntry: LogEntry,
+                     isSelected: Boolean,
+                     onSelect: () -> Unit,
+                     onEdit: () -> Unit) {
     val dateFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+    val borderWidth:BorderStroke = if (isSelected) BorderStroke(4.dp, MaterialTheme.colorScheme.primary) else BorderStroke(0.dp, Color.Transparent)
 
     // Calculate duration
     val duration = if (logEntry.endTimestamp != null) {
@@ -47,7 +62,16 @@ fun ListViewItem(logEntry: LogEntry) {
         "--"
     }
 
-    Column {
+    Column (
+        modifier = Modifier
+            .background(backgroundColor)
+            .border(borderWidth, shape = MaterialTheme.shapes.small )
+            .combinedClickable(
+                onClick = onEdit,     // Single tap to edit
+                onLongClick = onSelect // Long press to toggle selection
+            )
+//            .padding(16.dp)
+    ){
         ListItem(
             headlineContent = {
                 Text(text = dateFormat.format(Date(logEntry.startTimestamp)))
@@ -67,6 +91,6 @@ fun ListViewItem(logEntry: LogEntry) {
                 )
             }
         )
-        HorizontalDivider()
+//        HorizontalDivider()
     }
 }
