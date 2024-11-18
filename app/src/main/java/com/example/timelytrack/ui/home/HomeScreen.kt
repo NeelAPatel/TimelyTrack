@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,6 +93,7 @@ fun HomeScreen() {
                 items(
                     items = logs,
                     key = { log -> log.id } // Assuming your LogEntry has an 'id' property
+
                 ) { log ->
                     SwipeToDeleteContainer(
                         item = log,
@@ -161,8 +164,6 @@ fun <T> SwipeToDeleteContainer(
             }
         }
     )
-
-
 
     LaunchedEffect(key1 = isRemoved) {
         if(isRemoved) {

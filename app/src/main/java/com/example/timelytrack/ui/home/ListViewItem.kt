@@ -9,18 +9,29 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.timelytrack.model.LogEntry
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@Preview(showBackground = true)
-@Composable
-fun ListViewItemPreview() {
-    val logEntry = LogEntry(id = 0, categoryId = 1.toString(), startTimestamp = 1679289600000, endTimestamp = 1679290200000)
-    ListViewItem(logEntry = logEntry)
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun ListViewItemPreview() {
+//    val logEntry = LogEntry(id = 0, categoryId = 1.toString(), startTimestamp = 1679289600000, endTimestamp = 1679290200000)
+//    ListViewItem(
+//        logEntry = logEntry, combinedClickable = Modifier.Companion
+//            .combinedClickable(
+//                onClick = { tappedListItemId = it.id },
+//                onLongClick = {
+//                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+//                    contextMenuPhotoId = photo.id
+//                },
+//                onLongClickLabel = stringResource(R.string.open_context_menu)
+//            )
+//    )
+//}
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
