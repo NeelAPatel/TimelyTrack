@@ -93,6 +93,12 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
             selectedEntries + groupLogs
         }
     }
+
+    fun updateLogEntry(logEntry: LogEntry) {
+        viewModelScope.launch {
+            repository.updateLogEntry(logEntry)
+        }
+    }
 }
 
 

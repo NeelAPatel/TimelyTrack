@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.example.timelytrack.model.LogEntry
 import java.util.Locale
 
+
+
 //@Preview(showBackground = true)
 //@Composable
 //fun ListStickyHeaderPreview() {

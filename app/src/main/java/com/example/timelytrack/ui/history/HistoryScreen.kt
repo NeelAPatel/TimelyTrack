@@ -3,19 +3,34 @@ package com.example.timelytrack.ui.history
 
 //import android.graphics.Color
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.RectangleShape
 
 @Preview(showBackground = true)
 @Composable
@@ -29,6 +44,28 @@ fun HistoryScreenPreview() {
 @Composable
 fun HistoryScreen() {
     Text(text = "History Screen")
+    val dismissState = rememberSwipeToDismissBoxState()
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val color by
+            animateColorAsState(
+                when (dismissState.targetValue) {
+                    SwipeToDismissBoxValue.Settled -> Color.LightGray
+                    SwipeToDismissBoxValue.StartToEnd -> Color.Green
+                    SwipeToDismissBoxValue.EndToStart -> Color.Red
+                }
+            )
+            Box(Modifier.fillMaxSize().background(color))
+        }
+    ) {
+        OutlinedCard(shape = RectangleShape) {
+            ListItem(
+                headlineContent = { Text("Cupcake") },
+                supportingContent = { Text("Swipe me left or right!") }
+            )
+        }
+    }
 }
 
 
