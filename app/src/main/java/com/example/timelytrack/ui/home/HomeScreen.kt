@@ -11,33 +11,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.DismissDirection
-//noinspection UsingMaterialAndMaterial3Libraries
-//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.ExperimentalMaterialApi
-//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Flag
-//noinspection UsingMaterialAndMaterial3Libraries
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timelytrack.model.LogEntry
 import com.example.timelytrack.viewmodel.LogViewModel
@@ -45,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 
@@ -95,8 +84,6 @@ fun HomeScreen() {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // --- Updated to loop through each date group ---
-            // Display grouped logs with headers
             groupedLogs.forEach { (date, logs) ->
                 stickyHeader {
                     ListStickyHeader(date = date, logs = logs, onSelectAll = {viewModel.selectAllLogsInGroup(logs)})
@@ -120,39 +107,6 @@ fun HomeScreen() {
                 }
             }
         }
-    }
-}
-
-@ExperimentalFoundationApi
-@Composable
-fun FABComponent(viewModel: LogViewModel){
-    Column(
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(end = 16.dp, bottom = 16.dp)
-    ) {
-
-        SmallFloatingActionButton(
-            onClick = { viewModel.completeLastLogEntry() },
-            containerColor = MaterialTheme.colorScheme.onPrimary,
-            contentColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(Icons.Filled.Check, contentDescription = "Complete current log")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Debug text for the number of log entries
-        Text("Logs backend count: " + viewModel.allLogEntries.collectAsState().value.size.toString())
-
-        ExtendedFloatingActionButton(
-            onClick = { viewModel.addLogEntry("1") },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
-            text = { Text("New Log") },
-        )
     }
 }
 
@@ -195,7 +149,15 @@ fun <T> SwipeToDeleteContainer(
                     Modifier
                         .fillMaxSize()
                         .background(color)
-                )
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Delete",
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        tint = Color.White
+                    )
+                }
             },
         ) {
             // Render the log item content
