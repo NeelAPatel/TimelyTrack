@@ -47,8 +47,8 @@ import java.util.Locale
 @Composable
 fun ListViewItem(    logEntry: LogEntry,
                      isSelected: Boolean,
-                     onSelect: () -> Unit,
-                     onEdit: () -> Unit) {
+                     onLongClick: () -> Unit,
+                     onClick: () -> Unit) {
     val dateFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
     val borderWidth:BorderStroke = if (isSelected) BorderStroke(4.dp, MaterialTheme.colorScheme.primary) else BorderStroke(0.dp, Color.Transparent)
@@ -67,12 +67,18 @@ fun ListViewItem(    logEntry: LogEntry,
             .background(backgroundColor)
             .border(borderWidth, shape = MaterialTheme.shapes.small )
             .combinedClickable(
-                onClick = onEdit,     // Single tap to edit
-                onLongClick = onSelect // Long press to toggle selection
+                onClick = onClick,     // Single tap to edit
+                onLongClick = onLongClick // Long press to toggle selection
             )
 //            .padding(16.dp)
     ){
         ListItem(
+            leadingContent = {
+                Icon(
+                    Icons.Filled.Schedule,
+                    contentDescription = "Log Time Icon"
+                )
+            },
             headlineContent = {
                 Text(text = dateFormat.format(Date(logEntry.startTimestamp)))
             },
@@ -84,12 +90,6 @@ fun ListViewItem(    logEntry: LogEntry,
             trailingContent = {
                 Text(text = duration)
             },
-            leadingContent = {
-                Icon(
-                    Icons.Filled.Schedule,
-                    contentDescription = "Log Time Icon"
-                )
-            }
         )
 //        HorizontalDivider()
     }

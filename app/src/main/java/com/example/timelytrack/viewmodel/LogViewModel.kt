@@ -18,11 +18,9 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
 
     // variables
     val allLogEntries: StateFlow<List<LogEntry>> = repository.allItems
-
     // State for scrolling to the bottom when a new log is added
     private val _scrollToBottom = MutableStateFlow(false)
     val scrollToBottom: StateFlow<Boolean> = _scrollToBottom
-
     // State for selected log entries in multi-select mode
     private val _selectedLogEntries = MutableStateFlow<Set<LogEntry>>(emptySet())
     val selectedLogEntries: StateFlow<Set<LogEntry>> = _selectedLogEntries
@@ -80,6 +78,11 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
         }
     }
 
+    // Return selected log's data to edit
+    fun getLogById(id: Int): LogEntry? {
+        return allLogEntries.value.find { it.id == id }
+    }
+
     // Toggles selection for a log entry (used for multi-select)
     fun toggleLogSelection(logEntry: LogEntry) {
         _selectedLogEntries.update { selectedEntries ->
@@ -87,12 +90,24 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
         }
     }
 
-    // Selects all logs in a specific group
-    fun selectAllLogsInGroup(groupLogs: List<LogEntry>) {
+    // Toggles selection for a log entry (used for multi-select)
+    fun toggleGroupedLogsSelection(groupedLogs: List<LogEntry>) {
+        // This function returns selectedEntries with groupedLogs added if not present, and removed if present
         _selectedLogEntries.update { selectedEntries ->
-            selectedEntries + groupLogs
+            if (selectedEntries.containsAll(groupedLogs)) selectedEntries - groupedLogs else selectedEntries + groupedLogs
         }
+
     }
+
+//    // Selects all logs in a specific group
+//    fun selectAllLogsInGroup(groupLogs: List<LogEntry>) {
+//        _selectedLogEntries.update { selectedEntries ->
+//            if (groupLogs in selectedEntries)
+//                selectedEntries - groupLogs
+//            else
+//                selectedEntries + groupLogs
+//        }
+//    }
 
     fun updateLogEntry(logEntry: LogEntry) {
         viewModelScope.launch {

@@ -45,7 +45,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ListStickyHeader(date: String, logs: List<LogEntry>, onSelectAll: () -> Unit) {
+fun ListStickyHeader(date: String, logs: List<LogEntry>, onLongClick: () -> Unit) {
 
 
     Row(
@@ -55,8 +55,8 @@ fun ListStickyHeader(date: String, logs: List<LogEntry>, onSelectAll: () -> Unit
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(8.dp)
             .combinedClickable(
-                onClick = onSelectAll, // Select all logs in the group when header is tapped
-                onLongClick = {} // Additional functionality can be added here if needed
+                onClick = { }, // Select all logs in the group when header is tapped
+                onLongClick = onLongClick, // Additional functionality can be added here if needed
             ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

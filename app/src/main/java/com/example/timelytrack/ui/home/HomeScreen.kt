@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
@@ -57,10 +58,13 @@ fun HomeScreen() {
 
     //Variables for editing a single log entry with BottomSheet
     // State for managing the bottom sheet and selected log
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+//    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedLog by remember { mutableStateOf<LogEntry?>(null) }
-    val coroutineScope = rememberCoroutineScope()
+//    val coroutineScope = rememberCoroutineScope()
 
+    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val scope = rememberCoroutineScope()
 
     // Scroll Position launch effect
     LaunchedEffect(scrollToBottom, logEntries) {
@@ -86,12 +90,13 @@ fun HomeScreen() {
         ) {
             groupedLogs.forEach { (date, logs) ->
                 stickyHeader {
-                    ListStickyHeader(date = date, logs = logs, onSelectAll = {viewModel.selectAllLogsInGroup(logs)})
+                    ListStickyHeader(date = date, logs = logs, onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
                 }
                 items(
                     items = logs,
                     key = { log -> log.id }  // Unique ID for each log entry
                 ) { log ->
+                    selectedLog = log
                     SwipeToDeleteContainer(
                         item = log,
                         key = log.id,
@@ -100,14 +105,22 @@ fun HomeScreen() {
                         ListViewItem(
                             logEntry = it,
                             isSelected = log in selectedLogEntries,
-                            onSelect = { viewModel.toggleLogSelection(log) },
-                            onEdit = { /* Show edit bottom sheet */ },
+                            onClick = { openBottomSheet = !openBottomSheet},
+                            onLongClick = { viewModel.toggleLogSelection(log) }
                         )
                     }
                 }
             }
         }
     }
+
+    if (openBottomSheet) {
+
+        ModalBottomSheetComponent(onCloseBottomSheet = { openBottomSheet = false }, bottomSheetState, selectedLog, scope)
+
+
+    }
+
 }
 
 @OptIn(ExperimentalMaterialApi::class)
