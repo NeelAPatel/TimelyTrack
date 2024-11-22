@@ -60,7 +60,6 @@ fun HomeScreen() {
     // State for managing the bottom sheet and selected log
 //    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedLog by remember { mutableStateOf<LogEntry?>(null) }
-//    val coroutineScope = rememberCoroutineScope()
 
     var openBottomSheet by rememberSaveable { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
@@ -96,7 +95,7 @@ fun HomeScreen() {
                     items = logs,
                     key = { log -> log.id }  // Unique ID for each log entry
                 ) { log ->
-                    selectedLog = log
+
                     SwipeToDeleteContainer(
                         item = log,
                         key = log.id,
@@ -105,7 +104,10 @@ fun HomeScreen() {
                         ListViewItem(
                             logEntry = it,
                             isSelected = log in selectedLogEntries,
-                            onClick = { openBottomSheet = !openBottomSheet},
+                            onClick = {
+                                selectedLog = log
+                                openBottomSheet = !openBottomSheet
+                                      },
                             onLongClick = { viewModel.toggleLogSelection(log) }
                         )
                     }
@@ -115,10 +117,14 @@ fun HomeScreen() {
     }
 
     if (openBottomSheet) {
-
-        ModalBottomSheetComponent(onCloseBottomSheet = { openBottomSheet = false }, bottomSheetState, selectedLog, scope)
-
-
+        ModalBottomSheetComponent(
+            onCloseBottomSheet = { openBottomSheet = false },
+            bottomSheetState = bottomSheetState,
+            selectedLog = selectedLog,
+            scope = scope,
+            onLogUpdated = {updatedLog:LogEntry -> selectedLog = updatedLog
+            viewModel.updateLogEntry(updatedLog)}
+        )
     }
 
 }
