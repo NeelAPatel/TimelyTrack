@@ -51,18 +51,16 @@ fun HomeScreen() {
 
     // Variables for multi-selection ## NOT WORKING
     val selectedLogEntries by viewModel.selectedLogEntries.collectAsState()
-    val scrollToBottom by viewModel.scrollToBottom.collectAsState()
 
     // Variables for auto-scroll position ## NOT WORKING
     val listState = rememberLazyListState()
+    val scrollToBottom by viewModel.scrollToBottom.collectAsState()
 
     //Variables for editing a single log entry with BottomSheet
     // State for managing the bottom sheet and selected log
-//    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedLog by remember { mutableStateOf<LogEntry?>(null) }
-
-    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
-    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    var selectedLogToEdit by remember { mutableStateOf<LogEntry?>(null)}
+    var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }  // Open or close toggle
+    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false) // remember the state of bottom sheet, opened or closed
     val scope = rememberCoroutineScope()
 
     // Scroll Position launch effect
@@ -89,13 +87,15 @@ fun HomeScreen() {
         ) {
             groupedLogs.forEach { (date, logs) ->
                 stickyHeader {
-                    ListStickyHeader(date = date, logs = logs, onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
+                    ListStickyHeader(
+                        date = date,
+                        logs = logs,
+                        onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
                 }
                 items(
                     items = logs,
                     key = { log -> log.id }  // Unique ID for each log entry
                 ) { log ->
-
                     SwipeToDeleteContainer(
                         item = log,
                         key = log.id,
@@ -105,9 +105,9 @@ fun HomeScreen() {
                             logEntry = it,
                             isSelected = log in selectedLogEntries,
                             onClick = {
-                                selectedLog = log
-                                openBottomSheet = !openBottomSheet
-                                      },
+                                selectedLogToEdit = log // Set the current log to edit
+                                isBottomSheetOpen = !isBottomSheetOpen  // Toggle the bottom sheet
+                            },
                             onLongClick = { viewModel.toggleLogSelection(log) }
                         )
                     }
@@ -116,13 +116,14 @@ fun HomeScreen() {
         }
     }
 
-    if (openBottomSheet) {
+    // Display the bottom sheet if its open
+    if (isBottomSheetOpen) {
         ModalBottomSheetComponent(
-            onCloseBottomSheet = { openBottomSheet = false },
+            isBottomSheetOpen = { isBottomSheetOpen = false },
             bottomSheetState = bottomSheetState,
-            selectedLog = selectedLog,
+            selectedLogToEdit = selectedLogToEdit,
             scope = scope,
-            onLogUpdated = {updatedLog:LogEntry -> selectedLog = updatedLog
+            onLogUpdated = {updatedLog:LogEntry -> selectedLogToEdit = updatedLog
             viewModel.updateLogEntry(updatedLog)}
         )
     }

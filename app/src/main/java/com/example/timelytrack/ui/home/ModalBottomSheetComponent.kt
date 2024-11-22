@@ -1,7 +1,8 @@
 package com.example.timelytrack.ui.home
 
 //import android.app.TimePickerDialog
-import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +40,10 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.Alignment
+import com.example.timelytrack.data.TimeWrapper
+import com.example.timelytrack.data.toTimeWrapper
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,11 +60,11 @@ fun ModalBottomSheetComponentPreview() {
         endTimestamp = 1679290200000
     )
     ModalBottomSheetComponent(
-        onCloseBottomSheet = { /* Do nothing for preview */ },
+        isBottomSheetOpen = { /* Do nothing for preview */ },
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.Expanded
         ),
-        selectedLog = mockLogEntry,
+        selectedLogToEdit = mockLogEntry,
         scope = scope,
         onLogUpdated = {}
     )
@@ -80,119 +84,95 @@ fun MyDialogContentPreview(){
     )
 
 
-    MyDialogContent(mockLogEntry, onCloseBottomSheet = { /* Do nothing for preview */ }, bottomSheetState = rememberModalBottomSheetState(), scope = rememberCoroutineScope(), onLogUpdated = {})
+    MyDialogContent(mockLogEntry,
+        isBottomSheetOpen = { /* Do nothing for preview */ },
+        bottomSheetState = rememberModalBottomSheetState(),
+        scope = rememberCoroutineScope(),
+        onLogUpdated = {})
 }
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModalBottomSheetComponent(
-    onCloseBottomSheet: () -> Unit,
+    isBottomSheetOpen: () -> Unit,
     bottomSheetState: SheetState,
-    selectedLog: LogEntry?,
+    selectedLogToEdit: LogEntry?,
     scope: CoroutineScope,
     onLogUpdated: (LogEntry) -> Unit
 ) {
     ModalBottomSheet(
-        onDismissRequest = { onCloseBottomSheet() },
+        onDismissRequest = { isBottomSheetOpen() },
         sheetState = bottomSheetState,
     ) {
 
-        MyDialogContent(selectedLog, onCloseBottomSheet, bottomSheetState, scope, onLogUpdated)
+        MyDialogContent(
+            isBottomSheetOpen = isBottomSheetOpen, bottomSheetState = bottomSheetState ,
+            selectedLogToEdit = selectedLogToEdit, scope = scope,
+            onLogUpdated = onLogUpdated)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyDialogContent(
-    selectedLog: LogEntry?,
-    onCloseBottomSheet: () -> Unit,
+    selectedLogToEdit: LogEntry?,
+    isBottomSheetOpen: () -> Unit,
     bottomSheetState: SheetState,
     scope: CoroutineScope,
     onLogUpdated: (LogEntry) -> Unit
 ) {
-    if (selectedLog == null) return
+    if (selectedLogToEdit == null) return
 
     val context = LocalContext.current
-    var startTimestamp by remember { mutableStateOf(selectedLog.startTimestamp) }
-    var endTimestamp by remember { mutableStateOf(selectedLog.endTimestamp) }
-
+    var startTimestamp by remember { mutableLongStateOf(selectedLogToEdit.startTimestamp) }
+    var endTimestamp by remember { mutableStateOf(selectedLogToEdit.endTimestamp) }
     var isTimePickerVisible by remember { mutableStateOf(false) }
-    var timePickerState = rememberTimePickerState()
     var isStartTimePicker by remember { mutableStateOf(true) }
-
-    // TimePicker Dialog
-    if (isTimePickerVisible) {
-        AlertDialog(
-            onDismissRequest = { isTimePickerVisible = false },
-            title = { Text(text = "Pick a Time") },
-            text = {
-                TimePicker(
-                    state = timePickerState,
-                    modifier = Modifier.padding(8.dp)
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val pickedHour = timePickerState.hour
-                        val pickedMinute = timePickerState.minute
-                        val calendar = Calendar.getInstance().apply {
-                            set(Calendar.HOUR_OF_DAY, pickedHour)
-                            set(Calendar.MINUTE, pickedMinute)
-                        }
-                        if (isStartTimePicker) {
-                            startTimestamp = calendar.timeInMillis
-                        } else {
-                            endTimestamp = calendar.timeInMillis
-                        }
-                        isTimePickerVisible = false
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { isTimePickerVisible = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+    var pickerTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val timePickerState = rememberTimePickerState(
+        initialHour = pickerTime.toTimeWrapper().get24Hour,
+        initialMinute = pickerTime.toTimeWrapper().getMinute,
+        is24Hour = false
+    )
 
 
-    Text(selectedLog.toString())
+
+    // === UI ====
+    // Debug String
+    Text(selectedLogToEdit.toString())
+
+    // Row 1 : Scheduling Row
+    // Icon | Start Time | -> | End Time
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
     ) {
-        // Scheduling Row
-        Icon(
-            Icons.Filled.Schedule,
-            contentDescription = "Clock",
-            modifier = Modifier.padding(16.dp)
-        )
+
+        Icon(Icons.Filled.Schedule, contentDescription = "Clock", modifier = Modifier.padding(16.dp))
+        // Start Time
         Box(
             modifier = Modifier
                 .clickable {
                     isStartTimePicker = true
                     isTimePickerVisible = true
+                    pickerTime = startTimestamp
                 }
 
                 .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp))
                 .padding(16.dp)
         ) { Text("" + formatTimestampToTime(startTimestamp)) }
 
-        Icon(
-            Icons.Filled.KeyboardDoubleArrowRight,
-            contentDescription = "Right arrow",
-            modifier = Modifier.padding(16.dp)
-        )
+        // Arrow
+        Icon(Icons.Filled.KeyboardDoubleArrowRight, contentDescription = "Right arrow", modifier = Modifier.padding(16.dp))
+
+        // End Time
         Box(
             modifier = Modifier
                 .clickable {
                     isStartTimePicker = false
                     isTimePickerVisible = true
+                    pickerTime = endTimestamp ?: System.currentTimeMillis()
                 }
                 .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp))
                 .padding(16.dp)
@@ -209,30 +189,96 @@ fun MyDialogContent(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
     ) {    // Save Button
+        // Save Button
         Button(
             onClick = {
-                // Perform any action with the updated timestamps
-                val updatedLog = selectedLog.copy(
-                    startTimestamp = startTimestamp,
-                    endTimestamp = endTimestamp
-                )
-                onLogUpdated(updatedLog)
-                onCloseBottomSheet()
+                if (endTimestamp!! < startTimestamp) {
+                    // Show an error or handle invalid end time
+                    println("Error: End time must be after or equal to start time.")
+                } else {
+                    val updatedLog = selectedLogToEdit.copy(
+                        startTimestamp = startTimestamp,
+                        endTimestamp = endTimestamp
+                    )
+                    onLogUpdated(updatedLog)
+                    isBottomSheetOpen()
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "Save")
+            Text("Save")
         }
     }
 
+    // Show the TimePickerDialog
+    TimePickerDialog(
+        isVisible = isTimePickerVisible,
+        onDismiss = { isTimePickerVisible = false },
+        initialTimestamp = pickerTime,
+        onTimeSelected = { selectedTime ->
+            if (isStartTimePicker) {
+                startTimestamp = selectedTime
+            } else {
+                if (selectedTime >= startTimestamp) {
+                    endTimestamp = selectedTime
+                } else {
+                    println("Error: End time must be after or equal to start time.")
+                }
+            }
+        }
+    )
+
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimePickerDialog(
+    isVisible: Boolean,
+    onDismiss: () -> Unit,
+    initialTimestamp: Long,
+    onTimeSelected: (Long) -> Unit
+) {
+    if (isVisible) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = initialTimestamp.toTimeWrapper().get24Hour,
+            initialMinute = initialTimestamp.toTimeWrapper().getMinute,
+            is24Hour = false
+        )
 
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Pick a Time") },
+            text = {
+                TimePicker(
+                    state = timePickerState,
+                    modifier = Modifier.padding(8.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val calendar = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                            set(Calendar.MINUTE, timePickerState.minute)
+                        }
+                        onTimeSelected(calendar.timeInMillis)
+                        onDismiss()
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { onDismiss() }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
 
-//fun formatTimestampToTime(timestamp: Long): String {
-//    val formatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
-//    return formatter.format(Date(timestamp))
-//}
 
 // Function to format timestamp to hh:mm AM/PM
 fun formatTimestampToTime(timestamp: Long?): String {
@@ -242,38 +288,4 @@ fun formatTimestampToTime(timestamp: Long?): String {
     } else {
         ""
     }
-}
-
-// Function to show a Time Picker dialog
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-fun showTimePicker(
-    context: android.content.Context,
-    startTime: Long?,
-    onTimeSelected: (Long) -> Unit
-) {
-//    val calendar = Calendar.getInstance().apply {
-//        timeInMillis = initialTime ?: System.currentTimeMillis()
-//    }
-//    val hour = calendar.get(Calendar.HOUR_OF_DAY)
-//    val minute = calendar.get(Calendar.MINUTE)
-
-
-
-
-//
-//    TimePicker(
-//        state =
-//        context,
-//        { _, selectedHour, selectedMinute ->
-//            val updatedCalendar = Calendar.getInstance().apply {
-//                set(Calendar.HOUR_OF_DAY, selectedHour)
-//                set(Calendar.MINUTE, selectedMinute)
-//            }
-//            onTimeSelected(updatedCalendar.timeInMillis)
-//        },
-//        hour,
-//        minute,
-//        false // Use 12-hour format
-//    ).show()
 }
