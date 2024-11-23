@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -177,6 +178,9 @@ fun MyDialogContent(
                 .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp))
                 .padding(16.dp)
         ) { // Show placeholder if endTimestamp is null
+
+
+
             Text(
                 text = endTimestamp?.let { formatTimestampToTime(it) } ?: "Set End Time",
                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -185,6 +189,90 @@ fun MyDialogContent(
             )
         }
     }
+
+
+    val outlinetextfieldModifier = Modifier
+//        .border(1.dp, MaterialTheme.colorScheme.primary)
+        .padding(8.dp)
+
+
+    Column( modifier = Modifier
+//        .border(1.dp, MaterialTheme.colorScheme.primary)
+        .padding(8.dp)
+
+    ) {
+        Row (
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+//                .border(1.dp, MaterialTheme.colorScheme.primary)
+                .fillMaxWidth(),
+        ) {
+
+            Icon(Icons.Filled.Schedule, contentDescription = "Clock", modifier = Modifier.padding(8.dp))
+            OutlinedTextField(
+                value = "00:00 AM",
+                onValueChange = {},
+                label = { Text("Start Time") },
+                isError = true,
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Schedule,
+                        contentDescription = "Pick Time",
+                        modifier = Modifier
+//                            .border(1.dp, MaterialTheme.colorScheme.primary)
+                            .clickable {}
+                    )
+                },
+//                modifier = Modifier.widthIn(min = 75.dp)
+                modifier = outlinetextfieldModifier.fillMaxWidth(0.5f)
+
+            )
+
+//            // Arrow
+//            Icon(Icons.Filled.KeyboardDoubleArrowRight, contentDescription = "Right arrow", modifier = Modifier.padding(16.dp))
+
+            OutlinedTextField(
+                value = "00:00AM",
+                onValueChange = {},
+                label = { Text("End Time") },
+                isError = true,
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Schedule,
+                        contentDescription = "Pick Time",
+                        modifier = Modifier
+//                            .border(1.dp, MaterialTheme.colorScheme.primary)
+                            .clickable {}
+                    )
+                },
+              modifier = outlinetextfieldModifier
+            )
+        }
+
+
+    }
+
+
+    Row(
+        modifier = Modifier.fillMaxWidth(), // Row will occupy full width
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Button(
+            onClick = {},
+            modifier = Modifier.fillMaxWidth(0.5f) // First button takes 30% of the total width
+        ) {
+            Text("Button 1")
+        }
+
+        Button(
+            onClick = {},
+            modifier = Modifier.fillMaxWidth(0.5f) // Second button also takes 30% of the total width
+        ) {
+            Text("Button 2")
+        }
+    }
+
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
@@ -239,6 +327,10 @@ fun TimePickerDialog(
     onTimeSelected: (Long) -> Unit
 ) {
     if (isVisible) {
+
+        var isInvalidTime by remember { mutableStateOf(false) }
+
+
         val timePickerState = rememberTimePickerState(
             initialHour = initialTimestamp.toTimeWrapper().get24Hour,
             initialMinute = initialTimestamp.toTimeWrapper().getMinute,
@@ -253,6 +345,17 @@ fun TimePickerDialog(
                     state = timePickerState,
                     modifier = Modifier.padding(8.dp)
                 )
+
+                // Validation message
+                if (isInvalidTime) {
+                    Text(
+                        text = "End time must be after start time",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
             },
             confirmButton = {
                 TextButton(
