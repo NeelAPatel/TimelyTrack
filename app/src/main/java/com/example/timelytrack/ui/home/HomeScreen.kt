@@ -7,13 +7,16 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
@@ -33,10 +36,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,9 +58,9 @@ fun HomeScreen() {
     // Variables for multi-selection ## NOT WORKING
     val selectedLogEntries by viewModel.selectedLogEntries.collectAsState()
 
-    // Variables for auto-scroll position ## NOT WORKING
-    val listState = rememberLazyListState() // Used to track scrolling
-    val scrollToBottom by viewModel.scrollToBottom.collectAsState()
+    // Variable for auto scroll to bottom?
+
+    // Variables for FAB scroll position
     var isFabVisible by remember { mutableStateOf(true) }
     var wasFABTapped by remember { mutableStateOf(false) } // Track if EFAB was tapped
 
@@ -65,6 +70,15 @@ fun HomeScreen() {
     var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }  // Open or close toggle
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false) // remember the state of bottom sheet, opened or closed
     val scope = rememberCoroutineScope()
+
+    // Scroll state for LazyColumn and syncing with carousel
+    val listState = rememberLazyListState()
+    val scrollToBottom by viewModel.scrollToBottom.collectAsState()
+
+    // State for selected date in the carousel
+    // Group logs by date
+    val groupedLogDates = groupedLogs.keys.toList()
+    var selectedDate by remember { mutableStateOf(groupedLogDates.firstOrNull() ?: "") }
 
 
     // Observe scroll state to toggle FAB visibility
@@ -101,50 +115,72 @@ fun HomeScreen() {
     ) {
         padding ->
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            groupedLogs.forEach { (date, logs) ->
-                stickyHeader {
-                    ListStickyHeader(
-                        date = date,
-                        logs = logs,
-                        onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
-                }
-                items(
-                    items = logs,
-                    key = { log -> log.id }  // Unique ID for each log entry
-                ) { log ->
-                    SwipeToDeleteContainer(
-                        item = log,
-                        key = log.id,
-                        onDelete = { viewModel.removeLogEntry(log) }
-                    ) {
-                        ListViewItem(
-                            logEntry = it,
-                            isSelected = log in selectedLogEntries,
-                            onClick = {
-                                selectedLogToEdit = log // Set the current log to edit
-                                isBottomSheetOpen = !isBottomSheetOpen  // Toggle the bottom sheet
-                            },
-                            onLongClick = { viewModel.toggleLogSelection(log) }
-                        )
+
+        Column(modifier = Modifier.padding(padding)) {
+            // Carousel: Add Horizontal Scrollable Row
+            CarouselComponent(
+                groupedLogDates = groupedLogDates,
+                selectedDate = selectedDate,
+                groupedLogs = groupedLogs,
+                onDateSelected = { date ->
+                    selectedDate = date
+                    // Scroll to the selected date in LazyColumn
+                    val index = groupedLogDates.indexOf(date)
+                    if (index != -1) {
+                        scope.launch { listState.animateScrollToItem(index) }
                     }
                 }
-            }
+            )
 
-            // Add virtual space at the end of the list
-            item {
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(96.dp*2) // Height of FAB + extra padding for visibility
-                )
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                groupedLogs.forEach { (date, logs) ->
+                    stickyHeader {
+                        ListStickyHeader(
+                            date = date,
+                            logs = logs,
+                            onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
+                    }
+                    items(
+                        items = logs,
+                        key = { log -> log.id }  // Unique ID for each log entry
+                    ) { log ->
+                        SwipeToDeleteContainer(
+                            item = log,
+                            key = log.id,
+                            onDelete = { viewModel.removeLogEntry(log) }
+                        ) {
+                            ListViewItem(
+                                logEntry = it,
+                                isSelected = log in selectedLogEntries,
+                                onClick = {
+                                    selectedLogToEdit = log // Set the current log to edit
+                                    isBottomSheetOpen = !isBottomSheetOpen  // Toggle the bottom sheet
+                                },
+                                onLongClick = { viewModel.toggleLogSelection(log) }
+                            )
+                        }
+                    }
+                }
+
+                // Add virtual space at the end of the list
+                item {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(96.dp*2) // Height of FAB + extra padding for visibility
+                    )
+                }
             }
         }
+
+
+
+
     }
 
     // Display the bottom sheet if its open
@@ -160,6 +196,58 @@ fun HomeScreen() {
     }
 
 }
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun CarouselComponent(
+    groupedLogDates: List<String>,
+    selectedDate: String,
+    groupedLogs: Map<String, List<LogEntry>>,
+    onDateSelected: (String) -> Unit
+) {
+    LazyRow (
+                modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 0.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ){
+
+        items(groupedLogDates) { date ->
+            val isSelected = date == selectedDate
+            val logs = groupedLogs[date] ?: emptyList()
+            // Calculate total duration
+            val totalDuration = logs.sumOf { log ->
+                log.endTimestamp!! - log.startTimestamp
+            }
+            Column (
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(0.dp)
+                    .background(
+                        color = if (isSelected) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    .clickable { onDateSelected(date) }
+                    .padding(8.dp)
+            )
+            {
+                Text(text = date.split(" ").get(1).take(1), style = MaterialTheme.typography.bodyMedium) // Month Initial
+                Text(text = date.takeLast(2), style = MaterialTheme.typography.bodyLarge) // Day of Month
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(4.dp)
+                ){
+                    Icon(Icons.Filled.Flag, contentDescription = null, modifier = Modifier.size(12.dp)) // Flag icon
+                    Text(text = "${logs.size}", style = MaterialTheme.typography.bodySmall) // Count of logs ${logs.size}
+                }
+            }
+        }
+
+    }
+
+}
+
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
