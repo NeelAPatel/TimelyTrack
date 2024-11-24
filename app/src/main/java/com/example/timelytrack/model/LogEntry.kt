@@ -21,7 +21,7 @@ data class LogEntry(
     val startTimestamp: Long,
 
     @ColumnInfo(name = "end_timestamp")
-    var endTimestamp: Long ?= null, // nullable for incomplete logs
+    var endTimestamp: Long
 
 )
 

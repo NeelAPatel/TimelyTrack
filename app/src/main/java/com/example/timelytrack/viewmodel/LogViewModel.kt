@@ -17,11 +17,13 @@ import kotlinx.coroutines.flow.*
 class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
 
     // variables
-//    private val _logEntries = MutableStateFlow<List<LogEntry>>(emptyList()) //App will modify Private variable
-//    val logEntries: StateFlow<List<LogEntry>> = _logEntries.asStateFlow() // expose public variable and functions
-
     val allLogEntries: StateFlow<List<LogEntry>> = repository.allItems
-
+    // State for scrolling to the bottom when a new log is added
+    private val _scrollToBottom = MutableStateFlow(false)
+    val scrollToBottom: StateFlow<Boolean> = _scrollToBottom
+    // State for selected log entries in multi-select mode
+    private val _selectedLogEntries = MutableStateFlow<Set<LogEntry>>(emptySet())
+    val selectedLogEntries: StateFlow<Set<LogEntry>> = _selectedLogEntries
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
@@ -36,7 +38,8 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
     fun addLogEntry(categoryId: String) {
         val newLogEntry = LogEntry(
             categoryId = categoryId,
-            startTimestamp = System.currentTimeMillis()
+            startTimestamp = System.currentTimeMillis(),
+            endTimestamp = System.currentTimeMillis()
         )
         viewModelScope.launch {
             repository.insertLogEntry(newLogEntry)
@@ -60,6 +63,56 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
                 entry.endTimestamp = System.currentTimeMillis()
                 repository.updateLogEntry(entry)
             }
+        }
+    }
+
+    // Clears the scroll-to-bottom event after the UI has handled it
+    fun clearScrollToBottom() {
+        _scrollToBottom.value = false
+    }
+
+    // Deletes a set of selected log entries
+    fun removeLogEntries(entries: Set<LogEntry>) {
+        viewModelScope.launch {
+            entries.forEach { repository.deleteLogEntry(it) }
+            _selectedLogEntries.value = emptySet()  // Clear selection after deletion
+        }
+    }
+
+    // Return selected log's data to edit
+    fun getLogById(id: Int): LogEntry? {
+        return allLogEntries.value.find { it.id == id }
+    }
+
+    // Toggles selection for a log entry (used for multi-select)
+    fun toggleLogSelection(logEntry: LogEntry) {
+        _selectedLogEntries.update { selectedEntries ->
+            if (logEntry in selectedEntries) selectedEntries - logEntry else selectedEntries + logEntry
+        }
+    }
+
+    // Toggles selection for a log entry (used for multi-select)
+    fun toggleGroupedLogsSelection(groupedLogs: List<LogEntry>) {
+        // This function returns selectedEntries with groupedLogs added if not present, and removed if present
+        _selectedLogEntries.update { selectedEntries ->
+            if (selectedEntries.containsAll(groupedLogs)) selectedEntries - groupedLogs else selectedEntries + groupedLogs
+        }
+
+    }
+
+//    // Selects all logs in a specific group
+//    fun selectAllLogsInGroup(groupLogs: List<LogEntry>) {
+//        _selectedLogEntries.update { selectedEntries ->
+//            if (groupLogs in selectedEntries)
+//                selectedEntries - groupLogs
+//            else
+//                selectedEntries + groupLogs
+//        }
+//    }
+
+    fun updateLogEntry(logEntry: LogEntry) {
+        viewModelScope.launch {
+            repository.updateLogEntry(logEntry)
         }
     }
 }

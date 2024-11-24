@@ -3,140 +3,131 @@
 package com.example.timelytrack.ui.home
 
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.DismissDirection
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.DismissState
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.DismissValue
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Flag
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.rememberDismissState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timelytrack.model.LogEntry
 import com.example.timelytrack.viewmodel.LogViewModel
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @ExperimentalFoundationApi
 @Composable
 fun HomeScreen() {
+    // Fetch the entries as the base data for the screen
     val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
     val logEntries = viewModel.allLogEntries.collectAsState()
+
+    //Group logs by date
     val groupedLogs = groupLogsByDate(logEntries)
+
+    // Variables for multi-selection ## NOT WORKING
+    val selectedLogEntries by viewModel.selectedLogEntries.collectAsState()
+
+    // Variables for auto-scroll position ## NOT WORKING
+    val listState = rememberLazyListState()
+    val scrollToBottom by viewModel.scrollToBottom.collectAsState()
+
+    //Variables for editing a single log entry with BottomSheet
+    // State for managing the bottom sheet and selected log
+    var selectedLogToEdit by remember { mutableStateOf<LogEntry?>(null)}
+    var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }  // Open or close toggle
+    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false) // remember the state of bottom sheet, opened or closed
+    val scope = rememberCoroutineScope()
+
+    // Scroll Position launch effect
+    LaunchedEffect(scrollToBottom, logEntries) {
+    //  println("Triggered scrollToBottom with logEntries.size = ${logEntries.value.size}")
+        if (scrollToBottom) {
+            listState.animateScrollToItem(logEntries.value.size - 1)
+            println("Scrolled to bottom.")
+            viewModel.clearScrollToBottom()
+        }
+    }
 
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
-        floatingActionButton = {
-            FABComponent(viewModel = viewModel)
-        },
+        floatingActionButton = { FABComponent(viewModel = viewModel) },
+    ) {
+        padding ->
 
-        ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // --- Updated to loop through each date group ---
             groupedLogs.forEach { (date, logs) ->
-                // --- Added StickyHeader for each date group ---
                 stickyHeader {
-                    ListStickyHeader(date = date, logs = logs)
+                    ListStickyHeader(
+                        date = date,
+                        logs = logs,
+                        onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
                 }
-                // --- Display logs for the current date group ---
                 items(
                     items = logs,
-                    key = { log -> log.id } // Assuming your LogEntry has an 'id' property
+                    key = { log -> log.id }  // Unique ID for each log entry
                 ) { log ->
                     SwipeToDeleteContainer(
                         item = log,
-                        key = log.id, // Pass the key to SwipeToDeleteContainer
+                        key = log.id,
                         onDelete = { viewModel.removeLogEntry(log) }
-
                     ) {
-                        ListViewItem(logEntry = it)
+                        ListViewItem(
+                            logEntry = it,
+                            isSelected = log in selectedLogEntries,
+                            onClick = {
+                                selectedLogToEdit = log // Set the current log to edit
+                                isBottomSheetOpen = !isBottomSheetOpen  // Toggle the bottom sheet
+                            },
+                            onLongClick = { viewModel.toggleLogSelection(log) }
+                        )
                     }
                 }
             }
         }
     }
-}
 
-@ExperimentalFoundationApi
-@Composable
-fun FABComponent(viewModel: LogViewModel){
-    Column(
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(end = 16.dp, bottom = 16.dp)
-    ) {
-
-        SmallFloatingActionButton(
-            onClick = { viewModel.completeLastLogEntry() },
-            containerColor = MaterialTheme.colorScheme.onPrimary,
-            contentColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(Icons.Filled.Check, contentDescription = "Complete current log")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Debug text for the number of log entries
-        Text("Logs backend count: " + viewModel.allLogEntries.collectAsState().value.size.toString())
-
-        ExtendedFloatingActionButton(
-            onClick = { viewModel.addLogEntry("1") },
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            icon = {  Icon(Icons.Filled.Flag, contentDescription = "New Log")},
-            text = { Text("New Log") },
+    // Display the bottom sheet if its open
+    if (isBottomSheetOpen) {
+        ModalBottomSheetComponent(
+            isBottomSheetOpen = { isBottomSheetOpen = false },
+            bottomSheetState = bottomSheetState,
+            selectedLogToEdit = selectedLogToEdit,
+            scope = scope,
+            onLogUpdated = {updatedLog:LogEntry -> selectedLogToEdit = updatedLog
+            viewModel.updateLogEntry(updatedLog)}
         )
     }
+
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -151,25 +142,9 @@ fun <T> SwipeToDeleteContainer(
     var isRemoved by remember(key) {
         mutableStateOf(false)
     }
-    val state = rememberDismissState(
-        confirmStateChange = { value ->
-            if (value == DismissValue.DismissedToStart) {
-                isRemoved = true
-                true
-            } else {
-                false
-            }
-        }
-    )
 
+    val dismissState = rememberSwipeToDismissBoxState()
 
-
-    LaunchedEffect(key1 = isRemoved) {
-        if(isRemoved) {
-            delay(animationDuration.toLong())
-            onDelete(item)
-        }
-    }
 
     AnimatedVisibility(
         visible = !isRemoved,
@@ -178,45 +153,48 @@ fun <T> SwipeToDeleteContainer(
             shrinkTowards = Alignment.Top
         ) + fadeOut()
     ) {
-        SwipeToDismiss(
-            state = state,
-            background = {
-                DeleteBackground(swipeDismissState = state)
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromEndToStart = true,
+            enableDismissFromStartToEnd = false,
+            backgroundContent = {
+                val color by animateColorAsState(
+                    when (dismissState.targetValue) {
+                        SwipeToDismissBoxValue.Settled -> Color.LightGray // Default background
+                        SwipeToDismissBoxValue.StartToEnd -> Color.Green  // Swipe right
+                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error // Swipe left
+                    }
+                )
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(color)
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Delete",
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        tint = Color.White
+                    )
+                }
             },
-            dismissContent = { content(item) },
-            directions = setOf(DismissDirection.EndToStart)
-        )
+        ) {
+            // Render the log item content
+            content(item)
+        }
+        // Check for dismissal in a LaunchedEffect
+        LaunchedEffect(dismissState.currentValue) {
+            if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                isRemoved = true // Trigger AnimatedVisibility exit
+                delay(300) // Wait for the animation to complete
+                onDelete(item) // Trigger the deletion logic
+            }
+        }
     }
+
 }
 
-
-
-
-
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-fun DeleteBackground(
-    swipeDismissState: DismissState
-){
-    val color = if (swipeDismissState.dismissDirection == DismissDirection.EndToStart) {
-        MaterialTheme.colorScheme.error
-    } else Color.Transparent
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(color)
-            .padding(16.dp),
-
-        contentAlignment = Alignment.CenterEnd
-    ) {
-        Icon(
-            imageVector = Icons.Default.Delete,
-            contentDescription = null,
-            tint = Color.White
-        )
-    }
-}
 // Grouping logs by date
 // --- Added function to group logs by date ---
 fun groupLogsByDate(logEntries: State<List<LogEntry>>): Map<String, List<LogEntry>> {

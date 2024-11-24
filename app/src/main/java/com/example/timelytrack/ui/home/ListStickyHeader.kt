@@ -1,7 +1,9 @@
 
 package com.example.timelytrack.ui.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,20 +26,26 @@ import androidx.compose.ui.unit.dp
 import com.example.timelytrack.model.LogEntry
 import java.util.Locale
 
-@Preview(showBackground = true)
-@Composable
-fun ListStickyHeaderPreview() {
-    val date = "Saturday, March 20, 2024"
-    val logs = listOf(
-        LogEntry(categoryId = "1", startTimestamp = 1679289600000, endTimestamp = 1679290200000), // Example logs
-        LogEntry(categoryId = "1", startTimestamp = 9679290800000, endTimestamp = 1679291400000)
-    )
-    ListStickyHeader(date = date, logs = logs)
 
-}
 
+//@Preview(showBackground = true)
+//@Composable
+//fun ListStickyHeaderPreview() {
+//    val date = "Saturday, March 20, 2024"
+//    val logs = listOf(
+//        LogEntry(categoryId = "1", startTimestamp = 1679289600000, endTimestamp = 1679290200000), // Example logs
+//        LogEntry(categoryId = "1", startTimestamp = 9679290800000, endTimestamp = 1679291400000)
+//    )
+//    ListStickyHeader(
+//        date = date,
+//        logs = logs,
+//        onSelectAll = { viewModel.selectAllLogsInGroup(logs) })
+//
+//}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ListStickyHeader(date: String, logs: List<LogEntry>) {
+fun ListStickyHeader(date: String, logs: List<LogEntry>, onLongClick: () -> Unit) {
 
 
     Row(
@@ -45,7 +53,11 @@ fun ListStickyHeader(date: String, logs: List<LogEntry>) {
             .shadow(4.dp)
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(8.dp),
+            .padding(8.dp)
+            .combinedClickable(
+                onClick = { }, // Select all logs in the group when header is tapped
+                onLongClick = onLongClick, // Additional functionality can be added here if needed
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
