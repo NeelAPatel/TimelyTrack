@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Schedule
@@ -46,6 +47,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.Alignment
 import com.example.timelytrack.data.TimeWrapper
 import com.example.timelytrack.data.toTimeWrapper
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -131,6 +133,15 @@ fun MyDialogContent(
     var startTimestamp by remember { mutableLongStateOf(selectedLogToEdit.startTimestamp) }
     var endTimestamp by remember { mutableStateOf(selectedLogToEdit.endTimestamp) }
 
+    // Variables for date pickers
+    // Editable fields for dates
+    var startDateText by remember { mutableStateOf(startTimestamp.toTimeWrapper().getFormattedDate()) }
+    var endDateText by remember { mutableStateOf(endTimestamp.toTimeWrapper().getFormattedDate()) }
+
+    // DatePicker visibility state
+    var isDatePickerVisible by remember { mutableStateOf(false) }
+    var isStartDatePicker by remember { mutableStateOf(false) }
+
 
     //Timepicker variables
     var isTimePickerVisible by remember { mutableStateOf(false) } // True = show, false = hide
@@ -211,7 +222,7 @@ fun MyDialogContent(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
+//            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
         ) {    // Save Button
             // Save Button
             Button(
@@ -239,7 +250,7 @@ fun MyDialogContent(
 
             }
         }
-    }
+    } // Column
 
 
 

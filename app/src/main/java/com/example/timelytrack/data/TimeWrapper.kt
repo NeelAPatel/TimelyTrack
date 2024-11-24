@@ -39,4 +39,8 @@ class TimeWrapper(private val timestamp: Long) {
     fun getFormattedTime(pattern: String): String {
         return SimpleDateFormat(pattern, Locale.getDefault()).format(date)
     }
+    fun getFormattedDate(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date)
+    }
+
 }
