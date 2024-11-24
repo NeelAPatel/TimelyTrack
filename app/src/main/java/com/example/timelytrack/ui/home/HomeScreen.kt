@@ -135,6 +135,15 @@ fun HomeScreen() {
                     }
                 }
             }
+
+            // Add virtual space at the end of the list
+            item {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(96.dp*2) // Height of FAB + extra padding for visibility
+                )
+            }
         }
     }
 
