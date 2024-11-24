@@ -56,6 +56,8 @@ fun HomeScreen() {
     // Variables for auto-scroll position ## NOT WORKING
     val listState = rememberLazyListState() // Used to track scrolling
     val scrollToBottom by viewModel.scrollToBottom.collectAsState()
+    var isFabVisible by remember { mutableStateOf(true) }
+    var wasFABTapped by remember { mutableStateOf(false) } // Track if EFAB was tapped
 
     //Variables for editing a single log entry with BottomSheet
     // State for managing the bottom sheet and selected log
@@ -65,23 +67,36 @@ fun HomeScreen() {
     val scope = rememberCoroutineScope()
 
 
-
-    // State to control the FAB visibility
-    var isFabVisible by remember { mutableStateOf(true) }
-
-// Observe scroll state to toggle FAB visibility when the user scrolls to the bottom
+    // Observe scroll state to toggle FAB visibility
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo }
             .collect { layoutInfo ->
-                val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                isFabVisible = lastVisibleIndex >= logEntries.value.size - 1
+                val lastIndex = logEntries.value.size - 1
+                val isLastItemVisible = layoutInfo.visibleItemsInfo.any { it.index == lastIndex }
+
+                if (!wasFABTapped) {
+                    isFabVisible = isLastItemVisible
+                } else {
+                    // Reset `wasFABTapped` when scrolling away from the last item
+                    val isScrolledAway = layoutInfo.visibleItemsInfo.none { it.index == lastIndex }
+                    if (isScrolledAway) {
+                        wasFABTapped = false
+                    }
+                }
             }
     }
 
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
         floatingActionButton = {
-                FABComponent(viewModel = viewModel, isFabVisible = isFabVisible)
+                FABComponent(viewModel = viewModel,
+                    isFabVisible = isFabVisible,
+                    onFabTapped = {
+                        wasFABTapped = true
+                        isFabVisible = true // Keep the FAB visible after a tap
+                    },
+//                    onScrollDetected = { wasFABTapped = false } // Reset flag on scroll)
+                )
         }
     ) {
         padding ->

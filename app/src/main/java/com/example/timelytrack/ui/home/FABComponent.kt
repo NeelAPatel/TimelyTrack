@@ -36,7 +36,11 @@ import com.example.timelytrack.viewmodel.LogViewModel
 
 @ExperimentalFoundationApi
 @Composable
-fun FABComponent(viewModel: LogViewModel, isFabVisible: Boolean){
+fun FABComponent(    viewModel: LogViewModel,
+                     isFabVisible: Boolean,
+                     onFabTapped: () -> Unit,
+//                     onScrollDetected: () -> Unit
+){
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -50,7 +54,9 @@ fun FABComponent(viewModel: LogViewModel, isFabVisible: Boolean){
                 exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut()
             ) {
                 SmallFloatingActionButton(
-                    onClick = { viewModel.completeLastLogEntry() },
+                    onClick = {
+                        onFabTapped()
+                        viewModel.completeLastLogEntry() },
                     containerColor = MaterialTheme.colorScheme.onPrimary,
                     contentColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(48.dp)
@@ -74,7 +80,10 @@ fun FABComponent(viewModel: LogViewModel, isFabVisible: Boolean){
 
 
             ExtendedFloatingActionButton(
-                onClick = { viewModel.addLogEntry("1") },
+                onClick = {
+                    onFabTapped() // Notify that the FAB was tapped
+                    viewModel.addLogEntry("1")
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 icon = {
