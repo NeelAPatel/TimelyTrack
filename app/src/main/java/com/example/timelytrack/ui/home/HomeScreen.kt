@@ -177,10 +177,6 @@ fun HomeScreen() {
                 }
             }
         }
-
-
-
-
     }
 
     // Display the bottom sheet if its open
