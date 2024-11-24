@@ -36,6 +36,7 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +54,7 @@ fun HomeScreen() {
     val selectedLogEntries by viewModel.selectedLogEntries.collectAsState()
 
     // Variables for auto-scroll position ## NOT WORKING
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState() // Used to track scrolling
     val scrollToBottom by viewModel.scrollToBottom.collectAsState()
 
     //Variables for editing a single log entry with BottomSheet
@@ -63,19 +64,25 @@ fun HomeScreen() {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false) // remember the state of bottom sheet, opened or closed
     val scope = rememberCoroutineScope()
 
-    // Scroll Position launch effect
-    LaunchedEffect(scrollToBottom, logEntries) {
-    //  println("Triggered scrollToBottom with logEntries.size = ${logEntries.value.size}")
-        if (scrollToBottom) {
-            listState.animateScrollToItem(logEntries.value.size - 1)
-            println("Scrolled to bottom.")
-            viewModel.clearScrollToBottom()
-        }
+
+
+    // State to control the FAB visibility
+    var isFabVisible by remember { mutableStateOf(true) }
+
+// Observe scroll state to toggle FAB visibility when the user scrolls to the bottom
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo }
+            .collect { layoutInfo ->
+                val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                isFabVisible = lastVisibleIndex >= logEntries.value.size - 1
+            }
     }
 
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
-        floatingActionButton = { FABComponent(viewModel = viewModel) },
+        floatingActionButton = {
+                FABComponent(viewModel = viewModel, isFabVisible = isFabVisible)
+        }
     ) {
         padding ->
 
