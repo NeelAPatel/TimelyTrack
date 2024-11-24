@@ -1,6 +1,7 @@
 package com.example.timelytrack.ui.home
 
 //import android.app.TimePickerDialog
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
@@ -125,194 +126,164 @@ fun MyDialogContent(
 ) {
     if (selectedLogToEdit == null) return
 
-    val context = LocalContext.current
+
+    //Variable for start/endtimestamp that are being used
     var startTimestamp by remember { mutableLongStateOf(selectedLogToEdit.startTimestamp) }
     var endTimestamp by remember { mutableStateOf(selectedLogToEdit.endTimestamp) }
-    var isTimePickerVisible by remember { mutableStateOf(false) }
-    var isStartTimePicker by remember { mutableStateOf(true) }
-    var pickerTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val timePickerState = rememberTimePickerState(
-        initialHour = pickerTime.toTimeWrapper().get24Hour,
-        initialMinute = pickerTime.toTimeWrapper().getMinute,
+
+
+    //Timepicker variables
+    var isTimePickerVisible by remember { mutableStateOf(false) } // True = show, false = hide
+    var initialPickerTime by remember {mutableLongStateOf(System.currentTimeMillis())} // Long format
+    val initialTimePickerState = rememberTimePickerState(
+        initialHour = initialPickerTime.toTimeWrapper().get24Hour,
+        initialMinute = initialPickerTime.toTimeWrapper().getMinute,
         is24Hour = false
     )
 
+    var isStartTimestamp by remember { mutableStateOf(false) } // True = show, false = hide
+    var isError by remember { mutableStateOf(false) }
+
+//    val context = LocalContext.current
 
 
+
+    //.border(1.dp, MaterialTheme.colorScheme.primary)
     // === UI ====
-    // Debug String
-    Text(selectedLogToEdit.toString())
+    Column( modifier = Modifier.padding(8.dp)) {
 
-    // Row 1 : Scheduling Row
-    // Icon | Start Time | -> | End Time
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
-    ) {
+        // Debug String
+        Row() {Text(selectedLogToEdit.toString())}
 
-        Icon(Icons.Filled.Schedule, contentDescription = "Clock", modifier = Modifier.padding(16.dp))
-        // Start Time
-        Box(
-            modifier = Modifier
-                .clickable {
-                    isStartTimePicker = true
-                    isTimePickerVisible = true
-                    pickerTime = startTimestamp
-                }
-
-                .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp))
-                .padding(16.dp)
-        ) { Text("" + formatTimestampToTime(startTimestamp)) }
-
-        // Arrow
-        Icon(Icons.Filled.KeyboardDoubleArrowRight, contentDescription = "Right arrow", modifier = Modifier.padding(16.dp))
-
-        // End Time
-        Box(
-            modifier = Modifier
-                .clickable {
-                    isStartTimePicker = false
-                    isTimePickerVisible = true
-                    pickerTime = endTimestamp ?: System.currentTimeMillis()
-                }
-                .border(1.dp, MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp))
-                .padding(16.dp)
-        ) { // Show placeholder if endTimestamp is null
-
-
-
-            Text(
-                text = endTimestamp?.let { formatTimestampToTime(it) } ?: "Set End Time",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = if (endTimestamp == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                )
-            )
-        }
-    }
-
-
-    val outlinetextfieldModifier = Modifier
-//        .border(1.dp, MaterialTheme.colorScheme.primary)
-        .padding(8.dp)
-
-
-    Column( modifier = Modifier
-//        .border(1.dp, MaterialTheme.colorScheme.primary)
-        .padding(8.dp)
-
-    ) {
+        // Row 1 : Scheduling Row
+        // Icon | Start Time | -> | End Time
         Row (
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-//                .border(1.dp, MaterialTheme.colorScheme.primary)
                 .fillMaxWidth(),
         ) {
-
             Icon(Icons.Filled.Schedule, contentDescription = "Clock", modifier = Modifier.padding(8.dp))
             OutlinedTextField(
-                value = "00:00 AM",
-                onValueChange = {},
                 label = { Text("Start Time") },
-                isError = true,
+                value = startTimestamp.toTimeWrapper().getFormattedTime("hh: mm a"),
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Schedule,
                         contentDescription = "Pick Time",
                         modifier = Modifier
-//                            .border(1.dp, MaterialTheme.colorScheme.primary)
-                            .clickable {}
+                            .clickable {
+                                isStartTimestamp = true
+                                initialPickerTime = startTimestamp
+                                isTimePickerVisible = true
+                            }
                     )
                 },
-//                modifier = Modifier.widthIn(min = 75.dp)
-                modifier = outlinetextfieldModifier.fillMaxWidth(0.5f)
-
+                readOnly = true,
+                isError = isError,
+                onValueChange = {},
+                modifier = Modifier.padding(8.dp).fillMaxWidth(0.5f)
             )
 
 //            // Arrow
 //            Icon(Icons.Filled.KeyboardDoubleArrowRight, contentDescription = "Right arrow", modifier = Modifier.padding(16.dp))
 
             OutlinedTextField(
-                value = "00:00AM",
-                onValueChange = {},
                 label = { Text("End Time") },
-                isError = true,
+                value =  endTimestamp.toTimeWrapper().getFormattedTime("hh: mm a"),
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Schedule,
                         contentDescription = "Pick Time",
                         modifier = Modifier
-//                            .border(1.dp, MaterialTheme.colorScheme.primary)
-                            .clickable {}
+                            .clickable {
+                                isStartTimestamp = false
+                                isTimePickerVisible = true
+                                initialPickerTime = endTimestamp ?: System.currentTimeMillis()
+                            }
                     )
                 },
-              modifier = outlinetextfieldModifier
+                readOnly = true,
+                isError = isError,
+                onValueChange = {},
+                modifier = Modifier.padding(8.dp)
             )
         }
 
-
-    }
-
-
-    Row(
-        modifier = Modifier.fillMaxWidth(), // Row will occupy full width
-        horizontalArrangement = Arrangement.Start
-    ) {
-        Button(
-            onClick = {},
-            modifier = Modifier.fillMaxWidth(0.5f) // First button takes 30% of the total width
-        ) {
-            Text("Button 1")
-        }
-
-        Button(
-            onClick = {},
-            modifier = Modifier.fillMaxWidth(0.5f) // Second button also takes 30% of the total width
-        ) {
-            Text("Button 2")
-        }
-    }
-
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
-    ) {    // Save Button
-        // Save Button
-        Button(
-            onClick = {
-                if (endTimestamp!! < startTimestamp) {
-                    // Show an error or handle invalid end time
-                    println("Error: End time must be after or equal to start time.")
-                } else {
-                    val updatedLog = selectedLogToEdit.copy(
-                        startTimestamp = startTimestamp,
-                        endTimestamp = endTimestamp
-                    )
-                    onLogUpdated(updatedLog)
-                    isBottomSheetOpen()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.primary).fillMaxWidth()
+        ) {    // Save Button
+            // Save Button
+            Button(
+                onClick = {
+                    if (endTimestamp!! < startTimestamp) {
+                        // Show an error or handle invalid end time
+                        println("Error: End time must be after or equal to start time.")
+                    } else {
+                        val updatedLog = selectedLogToEdit.copy(
+                            startTimestamp = startTimestamp,
+                            endTimestamp = endTimestamp
+                        )
+                        onLogUpdated(updatedLog)
+                        isBottomSheetOpen()
+                    }
+                },
+                enabled = !isError,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isError) {
+                    Text("Save disabled. Error detected")
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Save")
+                else
+                    Text("Save")
+
+            }
         }
     }
+
+
 
     // Show the TimePickerDialog
     TimePickerDialog(
         isVisible = isTimePickerVisible,
         onDismiss = { isTimePickerVisible = false },
-        initialTimestamp = pickerTime,
+        initialTimestamp = initialPickerTime,
         onTimeSelected = { selectedTime ->
-            if (isStartTimePicker) {
+
+
+            Log.e("Timest", "=============")
+            Log.e("Timest", isStartTimestamp.toString())
+            Log.e("Timest", "SelTime > EndTime = " + (selectedTime > endTimestamp).toString())
+
+            Log.e("INITIAL Timestamp", startTimestamp.toTimeWrapper().getFormattedTime("hh: mm a") + " " + endTimestamp.toTimeWrapper().getFormattedTime("hh: mm a") )
+            Log.e("selectedTimestamp", selectedTime.toTimeWrapper().getFormattedTime("hh: mm a") + " " + selectedTime)
+            Log.e("Timest", " - - - -")
+
+            val initialTimeDifference = endTimestamp.minus(startTimestamp) ?: 0L
+
+            if (isStartTimestamp) {
+                isError = false
                 startTimestamp = selectedTime
-            } else {
-                if (selectedTime >= startTimestamp) {
-                    endTimestamp = selectedTime
-                } else {
-                    println("Error: End time must be after or equal to start time.")
+
+                // Adjust endTimestamp to maintain the initial difference
+                if (selectedTime > (endTimestamp ?: selectedTime)) {
+                    endTimestamp = selectedTime + initialTimeDifference
                 }
+                Log.e("selectedTimeStamp", endTimestamp.toString())
+                Log.e("selectedTimeStamp",selectedTime.toTimeWrapper().getFormattedTime("hh: mm a") +  " --- -- --")
             }
+
+            if (!isStartTimestamp){
+                endTimestamp = selectedTime
+                if (selectedTime < startTimestamp)
+                    isError = true
+                else
+                    isError = false
+                Log.e("selectedTimeStamp", "--- -- -- " + selectedTime.toTimeWrapper().getFormattedTime("hh: mm a"))
+            }
+
+
+            Log.e("Timest", startTimestamp.toTimeWrapper().getFormattedTime("hh: mm a") + " " + endTimestamp.toTimeWrapper().getFormattedTime("hh: mm a") )
         }
     )
 

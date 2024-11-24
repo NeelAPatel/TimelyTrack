@@ -38,7 +38,8 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
     fun addLogEntry(categoryId: String) {
         val newLogEntry = LogEntry(
             categoryId = categoryId,
-            startTimestamp = System.currentTimeMillis()
+            startTimestamp = System.currentTimeMillis(),
+            endTimestamp = System.currentTimeMillis()
         )
         viewModelScope.launch {
             repository.insertLogEntry(newLogEntry)
