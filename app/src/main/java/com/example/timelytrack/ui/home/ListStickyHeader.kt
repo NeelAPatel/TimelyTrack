@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.timelytrack.model.LogEntry
 import java.util.Locale
@@ -45,7 +44,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ListStickyHeader(date: String, logs: List<LogEntry>, onLongClick: () -> Unit) {
+fun ListStickyHeader(date: String, logs: List<LogEntry>, onLongClick: () -> Unit, index: Int) {
 
 
     Row(
@@ -62,10 +61,11 @@ fun ListStickyHeader(date: String, logs: List<LogEntry>, onLongClick: () -> Unit
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = date,
+            text = date + " " + index.toString(),
             style = MaterialTheme.typography.titleMedium
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
+
             Icon(
                 imageVector = Icons.Filled.Flag,
                 contentDescription = "Total Logs",
