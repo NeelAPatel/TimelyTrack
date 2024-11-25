@@ -74,7 +74,14 @@ fun HomeScreen() {
     val logRowCarouselState = rememberLazyListState()
     var selectedCarouselDate by remember { mutableStateOf(groupedLogDates.firstOrNull() ?: "") }
 
-
+    //Scroll to latest log at launch
+    LaunchedEffect(logEntries.value.size) {
+        if (logEntries.value.isNotEmpty()) {
+            scope.launch {
+                logColumnListState.scrollToItem(logEntries.value.size - 1)
+            }
+        }
+    }
 
 
     LaunchedEffect(logColumnListState) {
@@ -106,6 +113,17 @@ fun HomeScreen() {
                     onFabTapped = {
                         wasFABTapped = true
                         isFabVisible = true // Keep the FAB visible after a tap
+//                        ======== Scroll Down and Add New Log ==========
+                        scope.launch {
+                            if (logEntries.value.isNotEmpty()) {
+                                logColumnListState.animateScrollToItem(logEntries.value.size - 1)
+                            }
+                            // After scrolling, add the new log entry
+//                            viewModel.addLogEntry("1")
+                            delay(100) // Ensure the new log entry is rendered
+                            logColumnListState.animateScrollToItem(logEntries.value.size)
+                        }
+                        //======== Scroll Down and Add New Log ==========
                     }
                 )
         }

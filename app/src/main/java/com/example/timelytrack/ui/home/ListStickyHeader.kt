@@ -61,7 +61,7 @@ fun ListStickyHeader(date: String, logs: List<LogEntry>, onLongClick: () -> Unit
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = date + " " + index.toString(),
+            text = date, // + " " + index.toString(),
             style = MaterialTheme.typography.titleMedium
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
