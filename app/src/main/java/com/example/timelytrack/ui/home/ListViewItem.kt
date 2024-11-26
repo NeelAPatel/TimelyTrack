@@ -25,22 +25,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-//@Preview(showBackground = true)
-//@Composable
-//fun ListViewItemPreview() {
-//    val logEntry = LogEntry(id = 0, categoryId = 1.toString(), startTimestamp = 1679289600000, endTimestamp = 1679290200000)
-//    ListViewItem(
-//        logEntry = logEntry, combinedClickable = Modifier.Companion
-//            .combinedClickable(
-//                onClick = { tappedListItemId = it.id },
-//                onLongClick = {
-//                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-//                    contextMenuPhotoId = photo.id
-//                },
-//                onLongClickLabel = stringResource(R.string.open_context_menu)
-//            )
-//    )
-//}
 
 @OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")

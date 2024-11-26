@@ -86,9 +86,7 @@ fun HomeScreen() {
 
     LaunchedEffect(logColumnListState) {
         snapshotFlow { logColumnListState.layoutInfo.visibleItemsInfo to logColumnListState.firstVisibleItemIndex }
-            .collect { (visibleItemsInfo, firstVisibleItemIndex)->
-
-
+            .collect { (visibleItemsInfo)->
                 // == fab control ==
                 val lastIndex = logEntries.value.size - 1
                 val isLastItemVisible = visibleItemsInfo.any { it.index == lastIndex }
@@ -113,17 +111,15 @@ fun HomeScreen() {
                     onFabTapped = {
                         wasFABTapped = true
                         isFabVisible = true // Keep the FAB visible after a tap
-//                        ======== Scroll Down and Add New Log ==========
+
+                        // ======== Scroll Down when FAB is tapped ==========
                         scope.launch {
                             if (logEntries.value.isNotEmpty()) {
                                 logColumnListState.animateScrollToItem(logEntries.value.size - 1)
                             }
-                            // After scrolling, add the new log entry
-//                            viewModel.addLogEntry("1")
                             delay(100) // Ensure the new log entry is rendered
                             logColumnListState.animateScrollToItem(logEntries.value.size)
                         }
-                        //======== Scroll Down and Add New Log ==========
                     }
                 )
         }

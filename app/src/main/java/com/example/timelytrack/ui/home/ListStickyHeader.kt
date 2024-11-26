@@ -4,13 +4,7 @@ package com.example.timelytrack.ui.home
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Schedule
@@ -25,28 +19,11 @@ import androidx.compose.ui.unit.dp
 import com.example.timelytrack.model.LogEntry
 import java.util.Locale
 
-
-
-//@Preview(showBackground = true)
-//@Composable
-//fun ListStickyHeaderPreview() {
-//    val date = "Saturday, March 20, 2024"
-//    val logs = listOf(
-//        LogEntry(categoryId = "1", startTimestamp = 1679289600000, endTimestamp = 1679290200000), // Example logs
-//        LogEntry(categoryId = "1", startTimestamp = 9679290800000, endTimestamp = 1679291400000)
-//    )
-//    ListStickyHeader(
-//        date = date,
-//        logs = logs,
-//        onSelectAll = { viewModel.selectAllLogsInGroup(logs) })
-//
-//}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListStickyHeader(date: String, logs: List<LogEntry>, onLongClick: () -> Unit, index: Int) {
 
-
+    // Header Row
     Row(
         modifier = Modifier
             .shadow(4.dp)
