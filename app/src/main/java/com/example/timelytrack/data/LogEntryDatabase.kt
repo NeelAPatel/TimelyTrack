@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.timelytrack.model.LogEntry
 
-@Database(entities = [LogEntry::class], version = 1, exportSchema = false)
+@Database(entities = [LogEntry::class], version = 2, exportSchema = false)
 abstract class LogEntryDatabase: RoomDatabase() {
     abstract fun logEntryDao(): LogEntryDao
 
@@ -21,6 +21,7 @@ abstract class LogEntryDatabase: RoomDatabase() {
                     klass = LogEntryDatabase::class.java,
                     name = "sample"
                 )
+                    .fallbackToDestructiveMigration()
                     .build()
                     .also { Instance = it }
             }

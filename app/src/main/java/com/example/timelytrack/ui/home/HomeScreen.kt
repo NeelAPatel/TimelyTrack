@@ -7,13 +7,15 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
@@ -33,9 +35,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,72 +50,138 @@ fun HomeScreen() {
     // Fetch the entries as the base data for the screen
     val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
     val logEntries = viewModel.allLogEntries.collectAsState()
+    val scope = rememberCoroutineScope()
 
     //Group logs by date
     val groupedLogs = groupLogsByDate(logEntries)
+    val groupedLogDates = groupedLogs.keys.toList()
+
+    // FAB Visibility
+    var isFabVisible by remember { mutableStateOf(true) }
+    var wasFABTapped by remember { mutableStateOf(false) } // Track if EFAB was tapped
 
     // Variables for multi-selection ## NOT WORKING
     val selectedLogEntries by viewModel.selectedLogEntries.collectAsState()
-
-    // Variables for auto-scroll position ## NOT WORKING
-    val listState = rememberLazyListState()
-    val scrollToBottom by viewModel.scrollToBottom.collectAsState()
 
     //Variables for editing a single log entry with BottomSheet
     // State for managing the bottom sheet and selected log
     var selectedLogToEdit by remember { mutableStateOf<LogEntry?>(null)}
     var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }  // Open or close toggle
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false) // remember the state of bottom sheet, opened or closed
-    val scope = rememberCoroutineScope()
 
-    // Scroll Position launch effect
-    LaunchedEffect(scrollToBottom, logEntries) {
-    //  println("Triggered scrollToBottom with logEntries.size = ${logEntries.value.size}")
-        if (scrollToBottom) {
-            listState.animateScrollToItem(logEntries.value.size - 1)
-            println("Scrolled to bottom.")
-            viewModel.clearScrollToBottom()
+    // Scroll state for LazyColumn and syncing with carousel
+    val logColumnListState = rememberLazyListState()
+    val logRowCarouselState = rememberLazyListState()
+    var selectedCarouselDate by remember { mutableStateOf(groupedLogDates.firstOrNull() ?: "") }
+
+    //Scroll to latest log at launch
+    LaunchedEffect(logEntries.value.size) {
+        if (logEntries.value.isNotEmpty()) {
+            scope.launch {
+                logColumnListState.scrollToItem(logEntries.value.size - 1)
+            }
         }
+    }
+
+
+    LaunchedEffect(logColumnListState) {
+        snapshotFlow { logColumnListState.layoutInfo.visibleItemsInfo to logColumnListState.firstVisibleItemIndex }
+            .collect { (visibleItemsInfo)->
+                // == fab control ==
+                val lastIndex = logEntries.value.size - 1
+                val isLastItemVisible = visibleItemsInfo.any { it.index == lastIndex }
+
+                if (!wasFABTapped) {
+                    isFabVisible = isLastItemVisible
+                } else {
+                    // Reset `wasFABTapped` when scrolling away from the last item
+                    val isScrolledAway = visibleItemsInfo.none { it.index == lastIndex }
+                    if (isScrolledAway) {
+                        wasFABTapped = false
+                    }
+                }
+            }
     }
 
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
-        floatingActionButton = { FABComponent(viewModel = viewModel) },
+        floatingActionButton = {
+                FABComponent(viewModel = viewModel,
+                    isFabVisible = isFabVisible,
+                    onFabTapped = {
+                        wasFABTapped = true
+                        isFabVisible = true // Keep the FAB visible after a tap
+
+                        // ======== Scroll Down when FAB is tapped ==========
+                        scope.launch {
+                            if (logEntries.value.isNotEmpty()) {
+                                logColumnListState.animateScrollToItem(logEntries.value.size - 1)
+                            }
+                            delay(100) // Ensure the new log entry is rendered
+                            logColumnListState.animateScrollToItem(logEntries.value.size)
+                        }
+                    }
+                )
+        }
     ) {
         padding ->
+        Column(modifier = Modifier.padding(padding)) {
+            // Carousel: Add Horizontal Scrollable Row
+//            CarouselComponent(
+//                groupedLogDates = groupedLogDates,
+//                selectedDate = selectedCarouselDate,
+//                groupedLogs = groupedLogs,
+//                carouselState = logRowCarouselState,
+//                scope = scope,
+//                listState = logColumnListState,
+//                onDateSelected = { date ->
+//                    selectedCarouselDate = date
+//                }
+//            )
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            groupedLogs.forEach { (date, logs) ->
-                stickyHeader {
-                    ListStickyHeader(
-                        date = date,
-                        logs = logs,
-                        onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
-                }
-                items(
-                    items = logs,
-                    key = { log -> log.id }  // Unique ID for each log entry
-                ) { log ->
-                    SwipeToDeleteContainer(
-                        item = log,
-                        key = log.id,
-                        onDelete = { viewModel.removeLogEntry(log) }
-                    ) {
-                        ListViewItem(
-                            logEntry = it,
-                            isSelected = log in selectedLogEntries,
-                            onClick = {
-                                selectedLogToEdit = log // Set the current log to edit
-                                isBottomSheetOpen = !isBottomSheetOpen  // Toggle the bottom sheet
-                            },
-                            onLongClick = { viewModel.toggleLogSelection(log) }
-                        )
+            LazyColumn(
+                state = logColumnListState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                groupedLogs.forEach { (date, logs) ->
+                    stickyHeader {
+                        ListStickyHeader(
+                            date = date,
+                            logs = logs,
+                            index = groupedLogDates.indexOf(date),
+                            onLongClick = {viewModel.toggleGroupedLogsSelection(logs)})
                     }
+                    items(
+                        items = logs,
+                        key = { log -> log.id }  // Unique ID for each log entry
+                    ) { log ->
+                        SwipeToDeleteContainer(
+                            item = log,
+                            key = log.id,
+                            onDelete = { viewModel.removeLogEntry(log) }
+                        ) {
+                            ListViewItem(
+                                logEntry = it,
+                                isSelected = log in selectedLogEntries,
+                                onClick = {
+                                    selectedLogToEdit = log // Set the current log to edit
+                                    isBottomSheetOpen = !isBottomSheetOpen  // Toggle the bottom sheet
+                                },
+                                onLongClick = { viewModel.toggleLogSelection(log) }
+                            )
+                        }
+                    }
+                }
+
+                // Add virtual space at the end of the list
+                item {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(96.dp*2) // Height of FAB + extra padding for visibility
+                    )
                 }
             }
         }
@@ -129,6 +200,71 @@ fun HomeScreen() {
     }
 
 }
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun CarouselComponent(
+    groupedLogDates: List<String>,
+    selectedDate: String,
+    groupedLogs: Map<String, List<LogEntry>>,
+    onDateSelected: (String) -> Unit,
+    carouselState: LazyListState,
+    scope: CoroutineScope,
+    listState: LazyListState
+) {
+    LazyRow (
+            state = carouselState,
+            modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 0.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ){
+
+        items(groupedLogDates) { date ->
+            val isSelected = date == selectedDate
+            val logs = groupedLogs[date] ?: emptyList()
+            // Calculate total duration
+            val totalDuration = logs.sumOf { log ->
+                log.endTimestamp!! - log.startTimestamp
+            }
+            Column (
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(0.dp)
+                    .background(
+                        color = if (isSelected) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    .clickable { onDateSelected(date)
+                        // Scroll LazyColumn to the tapped date
+                        val columnIndex = groupedLogDates.indexOf(date)
+                        if (columnIndex != -1) {
+                            scope.launch {
+                                listState.animateScrollToItem(columnIndex)
+                            }
+                        }
+
+                    }
+                    .padding(8.dp)
+            )
+            {
+                Text(text = date.split(" ").get(1).take(1), style = MaterialTheme.typography.bodyMedium) // Month Initial
+                Text(text = date.split(" ").get(2).take(2), style = MaterialTheme.typography.bodyLarge) // Day of Month
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(4.dp)
+                ){
+                    Icon(Icons.Filled.Flag, contentDescription = null, modifier = Modifier.size(12.dp)) // Flag icon
+                    Text(text = "${logs.size}", style = MaterialTheme.typography.bodySmall) // Count of logs ${logs.size}
+                }
+            }
+        }
+
+    }
+
+}
+
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
