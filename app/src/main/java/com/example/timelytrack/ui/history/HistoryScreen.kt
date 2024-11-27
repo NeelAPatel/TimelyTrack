@@ -4,6 +4,7 @@ package com.example.timelytrack.ui.history
 
 //import android.graphics.Color
 
+import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,16 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.RectangleShape
 
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
@@ -32,18 +29,50 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.*
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.timelytrack.ui.home.groupLogsByDate
+import com.example.timelytrack.viewmodel.LogViewModel
 import kotlinx.coroutines.launch
-import java.util.Calendar
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import com.example.timelytrack.model.LogEntry
+
+import com.patrykandpatrick.vico.core.*
+import com.patrykandpatrick.vico.compose.*
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.views.*
+import com.patrykandpatrick.vico.compose.common.*
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.core.cartesian.CartesianLayerInsetter
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
+import kotlin.random.Random
+
+//import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
+//import com.patrykandpatrick.vico.compose.chart.Chart
+//import com.patrykandpatrick.vico.compose.chart.column.columnChart
+//import com.patrykandpatrick.vico.compose.style.ProvideChartStyle
+//import com.patrykandpatrick.vico.core.entry.entryModelOf
+//import com.patrykandpatrick.vico.core.entry.ChartEntry
+//import com.patrykandpatrick.vico.compose.cartesian.axis.
+//import com.patrykandpatrick.vico.compose.axis.vertical.startAxis
 
 @Preview(showBackground = true)
 @Composable
@@ -56,25 +85,210 @@ fun HistoryScreenPreview() {
 
 @Composable
 fun HistoryScreen() {
-    Text(text = "History Screen")
 
-    DemoBottomSheet()
-
-    DemoSwipeToDismissBox()
+    // Data retrieve
+    val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
+    val logEntries = viewModel.allLogEntries.collectAsState()
+    val groupedLogs = groupLogsByDate(logEntries)
+    val groupedLogDates = groupedLogs.keys.toList()
 
     Scaffold(
         content={ innerPadding ->
+            Text(innerPadding.toString())
             LazyColumn{
-                item { DemoSwipeToDismissBox() }
-                item { DemoBottomSheet() }
-                item { DemoTimePickerWithError()}
 
+                item{
+                    groupedLogs.forEach { (date, logs) ->
+                        Text("Date: $date" + " " + "Logs: ${logs.size}")
+                    }
+                }
+
+//                item { DemoSwipeToDismissBox() }
+//                item { DemoBottomSheet() }
+//                item { DemoTimePickerWithError()}
+//                item{DemoYCharts()}
+
+
+                item{DemoVicoChart(groupedLogs)}
             }
         }
     )
 
 }
 
+@Composable
+fun DemoVicoChart(groupedLogs: Map<String, List<LogEntry>>) {
+//    val chartEntries = remember(groupedLogs) {
+//        groupedLogs.entries.mapIndexed { index, (date, logs) ->
+//            LogEntry(x = index.toFloat(), y = logs.size.toFloat())
+//        }
+//    }
+
+//    val logsSizeSeries = groupedLogs.map { it.value.size } // Get logs size as series
+//    val logsDateGroups = groupedLogs.map {it.key.split(" ").get(1) + " " + it.key.split(" ").get(2).replace(",", "")}
+    // Generate a list of dates for November 2024
+    val formatter = DateTimeFormatter.ofPattern("MMM dd")
+    val dates = (1..30).map { day ->
+        LocalDate.of(2024, 11, day).format(formatter) // Format as "Nov 01", "Nov 02", etc.
+    }
+
+    // Generate random values for each day
+    val values = List(30) { Random.nextInt(0, 20) } // Random log counts (0-20)
+
+    // Combine dates and values into a dummy groupedLogs structure
+    val groupedLogs = dates.zip(values).associate { it.first to it.second }
+
+    // Chart configuration
+    val logsSizeSeries = groupedLogs.values.toList() // Extract values for the chart
+    val logsDateGroups = groupedLogs.keys.toList() // Extract dates for labels
+
+
+//    val logsSizeSeries = listOf(4f, 12f, 8f) // Heights of the bars
+//    val logsDateGroups = listOf("Nov 27", "Nov 28", "Nov 29") // Labels for each bar
+
+    // Create chart entries with explicit x values
+    val entries = logsSizeSeries.mapIndexed { index, size ->
+        index.toFloat() to size // Pair of (x, y) for each bar
+    }
+
+
+    // Chart configuration
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(logsSizeSeries) {
+        modelProducer.runTransaction { columnSeries { series(logsSizeSeries) }
+
+        }
+    }
+
+    LaunchedEffect(logsSizeSeries) {
+        modelProducer.runTransaction {
+            columnSeries {
+                series(logsSizeSeries) // Pass the log sizes directly as a collection
+            }
+        }
+    }
+
+
+
+//
+////    val modelProducer = remember { CartesianChartModelProducer() }
+//    LaunchedEffect(Unit) {
+////        modelProducer.runTransaction { columnSeries { series(4, 12, 8, 16) } }
+//        modelProducer.runTransaction { columnSeries { series(4, 12, 8, 16) } }
+//    }
+    CartesianChartHost(
+        rememberCartesianChart(
+            rememberColumnCartesianLayer(),
+            startAxis = VerticalAxis.rememberStart(
+//                valueFormatter = CartesianValueFormatter.
+            ),
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = CartesianValueFormatter { _, x, _ ->
+                    // Map x to the corresponding date label
+                    logsDateGroups.getOrNull(x.roundToInt()) ?: "" // Ensure safety with getOrNull
+                },
+                itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = 1) // Adjust spacing
+            ),
+        ),
+        modelProducer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    )
+//    )
+//    val model = entryModelOf(chartEntries)
+//
+//    ProvideChartStyle(
+//        chartStyle = com.patrykandpatrick.vico.core.DefaultColors.Blue.toChartStyle()
+//    ) {
+//        Chart(
+//            chart = columnChart(),
+//            model = model,
+//            startAxis = startAxis(
+//                label = { value, _ -> "${value.toInt()}" }
+//            ),
+//            bottomAxis = bottomAxis(
+//                label = { value, _ ->
+//                    groupedLogs.keys.elementAtOrNull(value.toInt()) ?: ""
+//                }
+//            ),
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(300.dp)
+//        )
+//    }
+}
+
+//
+//@Composable
+//fun DemoYCharts() {
+////    val barData = DataUtils.getBarChartData(50, maxRange, BarChartType.VERTICAL, DataCategoryOptions())
+////    Log.e("barData", barData.toString())
+//
+//    // make a slider to control value of bar data
+//    var sliderPosition by remember { mutableFloatStateOf(0f) }
+//
+//
+//    val customBarData = listOf(
+//        BarData(label = "Jan", point = Point(10f, 20f)),
+//        BarData(label = "Feb", point = Point(20f, 30f)),
+//        BarData(label = "Mar", point = Point(15f, 25f)),
+//        BarData(label = "Apr", point = Point(5f, 10f)),
+//        BarData(label = "May", point = Point(30f, 40f))
+//    )
+//
+//    val maxRange = 40
+//    val yStepSize = 10
+//
+//    val xAxisData = AxisData.Builder()
+//        .axisStepSize(30.dp)
+//        .steps(customBarData.size - 1)
+//        .bottomPadding(40.dp)
+//        .axisLabelAngle(20f)
+//        .startDrawPadding(48.dp)
+//        .labelData { index -> customBarData[index].label }
+//        .build()
+//
+//    val yAxisData = AxisData.Builder()
+//        .steps(yStepSize)
+//        .labelAndAxisLinePadding(20.dp)
+//        .axisOffset(20.dp)
+//        .labelData { index -> (index * (maxRange / yStepSize)).toString() }
+//        .build()
+//
+//    val barChartData = BarChartData(
+//        chartData = customBarData,
+//        xAxisData = xAxisData,
+//        yAxisData = yAxisData,
+//        barStyle = BarStyle(
+//            paddingBetweenBars = 20.dp,
+//            barWidth = 25.dp
+//        ),
+//        showYAxis = true,
+//        showXAxis = true,
+//        horizontalExtraSpace = 10.dp,
+//    )
+//
+//    Column {
+//        Text(customBarData.toString())
+//        BarChart(modifier = Modifier.height(350.dp), barChartData = barChartData)
+//    }
+//    Column {
+////        Text(customBarData.toString())
+//
+//
+//        BarChart(modifier = Modifier.height(350.dp), barChartData = barChartData)
+//            Slider(
+//                value = sliderPosition,
+//                onValueChange = { sliderPosition = it }
+//            )
+//            Text(text = sliderPosition.toString())
+//    }
+//}
+
+
+
+// ===============================================================================================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DemoTimePickerWithError() {
