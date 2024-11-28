@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.timelytrack.ui.home
+package com.example.timelytrack.ui.history
 
 import android.text.Layout
 import androidx.compose.material3.MaterialTheme
