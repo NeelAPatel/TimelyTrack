@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.toArgb
 import com.example.timelytrack.model.LogEntry
 
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
@@ -43,6 +45,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberTop
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
@@ -75,8 +78,7 @@ fun HistoryScreen() {
     // === UI ====
     Scaffold() { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding).padding(8.dp)
+            modifier = Modifier.padding(innerPadding).padding(16.dp)
         ) {
             item {Text("Overall History")}
             // Single Choice Selector
@@ -84,9 +86,9 @@ fun HistoryScreen() {
             // Graph 1
             item {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
+//                    modifier = Modifier
+////                        .height(300.dp)
+//                        .fillMaxWidth()
                 ) {
                     GeneralChart(singleChoiceSelectedIndex, logEntries = logEntries)
                 }
@@ -114,9 +116,9 @@ fun HistoryScreen() {
             item {Text("Hourly Aggregate")}
             item {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+////                        .height(300.dp)
                 ) {
                     HourAggregateChart(singleChoiceSelectedIndex, logEntries = logEntries)
                 }
@@ -131,21 +133,6 @@ fun HistoryScreen() {
 fun HourAggregateChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
     val logsDateGroups = mutableListOf<String>() // Labels for the chart
     val logsSizeSeries = mutableListOf<Int>() // Values for the chart
-
-//    // Prepare a map with all 24 hours initialized to 0
-//    val hourlyMap = (0..23).associate { hour ->
-////        String.format("%02d:00", hour) to 0
-//        String.format("%02d:00", hour) to 0
-//    }.toMutableMap()
-//
-//    // Aggregate log entries into the hourly map
-//    val calendar = Calendar.getInstance()
-//    logEntries.value.forEach { logEntry ->
-//        calendar.timeInMillis = logEntry.startTimestamp
-//        val hourKey = String.format("%02d:00", calendar.get(Calendar.HOUR_OF_DAY))
-//        hourlyMap[hourKey] = hourlyMap.getOrDefault(hourKey, 0) + 1
-//    }
-
 
     // Prepare a map with all 24 hours initialized to 0
     val hourFormat = SimpleDateFormat("hh:00 a", Locale.getDefault())
@@ -219,9 +206,11 @@ fun HourAggregateChart(singleChoiceSelectedIndex: Int, logEntries: State<List<Lo
                 endAxis = endAxisConfig,
                 topAxis = topAxisConfig,
                 bottomAxis = HorizontalAxis.rememberBottom(
+                    label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+                    titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
                     labelRotationDegrees = -90f,
                     valueFormatter = CartesianValueFormatter { _, x, _ ->
-                        logsDateGroups.getOrNull(x.roundToInt()) ?: " " // Ensure safety with getOrNull
+                        logsDateGroups.getOrNull(x.roundToInt()) ?: " XX " // Ensure safety with getOrNull
                     }),
                 marker = rememberMarker(DefaultCartesianMarker.LabelPosition.AbovePoint)
             ),
@@ -309,15 +298,37 @@ fun GeneralChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry
 fun generalChartAxesConfigurator(logsDateGroups: MutableList<String>, logsSizeSeries: MutableList<Int>?, singleChoiceSelectedIndex: Int):
         Triple<VerticalAxis<Axis.Position.Vertical.Start>?, VerticalAxis<Axis.Position.Vertical.End>?, Pair<HorizontalAxis<Axis.Position.Horizontal.Top>?, HorizontalAxis<Axis.Position.Horizontal.Bottom>?>> {
 
-    var startAxisConfig: VerticalAxis<Axis.Position.Vertical.Start>? = VerticalAxis.rememberStart( valueFormatter = integer())
+
+
+    val maxValue = logsSizeSeries?.maxOrNull() ?: 10 // Default maximum value
+    val stepSize = when {
+        maxValue <= 10 -> 1.0
+        maxValue <= 50 -> 5.0
+        else -> 10.0
+    }
+
+
+    var startAxisConfig: VerticalAxis<Axis.Position.Vertical.Start>? = VerticalAxis.rememberStart(
+//        valueFormatter = integer(),
+        valueFormatter = integer(),
+        tickLength = 5.dp,
+        itemPlacer = VerticalAxis.ItemPlacer.step({ _ -> stepSize } ), // Adjusts dynamically
+        label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+        titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface)
+    )
     var endAxisConfig: VerticalAxis<Axis.Position.Vertical.End>? = null
     var topAxisConfig: HorizontalAxis<Axis.Position.Horizontal.Top>? = null
     var bottomAxisConfig: HorizontalAxis<Axis.Position.Horizontal.Bottom>? = HorizontalAxis.rememberBottom(
+        label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+        titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
         labelRotationDegrees = 0f,
+        line = rememberAxisLineComponent(),
         valueFormatter = CartesianValueFormatter { _, x, _ ->
             logsDateGroups.getOrNull(x.roundToInt()) ?: " " // Ensure safety with getOrNull
         },
         itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = 1), // Adjust spacing
+        title = "Hours",
+
     )
 
     when (singleChoiceSelectedIndex){
@@ -326,10 +337,14 @@ fun generalChartAxesConfigurator(logsDateGroups: MutableList<String>, logsSizeSe
             endAxisConfig =null
 //            topAxisConfig = HorizontalAxis.rememberTop( valueFormatter = integer())
             bottomAxisConfig = HorizontalAxis.rememberBottom(
+                label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+                titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
                 labelRotationDegrees = -90f,
+                line = rememberAxisLineComponent(),
                 valueFormatter = CartesianValueFormatter { _, x, _ ->
                     logsDateGroups.getOrNull(x.roundToInt()) ?: " " // Ensure safety with getOrNull
-                })
+                }
+            )
         }
         1 -> {
 //            topAxisConfig.title = "Hours"
