@@ -4,6 +4,7 @@ package com.example.timelytrack.ui.history
 
 //import android.graphics.Color
 
+import android.widget.Space
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -66,6 +67,8 @@ fun HistoryScreen() {
     //=== Variables ===
     var singleChoiceSelectedIndex by remember { mutableStateOf(1) }
     val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
+    val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
+    val logEntries = viewModel.allLogEntries.collectAsState()
 
     // === Launch Effects ===
 
@@ -75,8 +78,19 @@ fun HistoryScreen() {
             modifier = Modifier
                 .padding(innerPadding).padding(8.dp)
         ) {
-
+            item {Text("Overall History")}
             // Single Choice Selector
+
+            // Graph 1
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                ) {
+                    GeneralChart(singleChoiceSelectedIndex, logEntries = logEntries)
+                }
+            }
             item {
                 SingleChoiceSegmentedButtonRow () {
                     singleChoiceSelectorOptions.forEachIndexed { index, label ->
@@ -93,12 +107,20 @@ fun HistoryScreen() {
                     }
                 }
             }
-            // Graph 1
-            item { Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            ) {GeneralChart(singleChoiceSelectedIndex) }}
+
+            item{Spacer(modifier = Modifier.height(20.dp))}
+            item{ androidx.compose.material.Divider()}
+
+            item {Text("Hourly Aggregate")}
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                ) {
+                    HourAggregateChart(singleChoiceSelectedIndex, logEntries = logEntries)
+                }
+            }
 
         }
 
@@ -106,9 +128,119 @@ fun HistoryScreen() {
 }
 
 @Composable
-fun GeneralChart(singleChoiceSelectedIndex: Int) {
-    val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
-    val logEntries = viewModel.allLogEntries.collectAsState()
+fun HourAggregateChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
+    val logsDateGroups = mutableListOf<String>() // Labels for the chart
+    val logsSizeSeries = mutableListOf<Int>() // Values for the chart
+
+//    // Prepare a map with all 24 hours initialized to 0
+//    val hourlyMap = (0..23).associate { hour ->
+////        String.format("%02d:00", hour) to 0
+//        String.format("%02d:00", hour) to 0
+//    }.toMutableMap()
+//
+//    // Aggregate log entries into the hourly map
+//    val calendar = Calendar.getInstance()
+//    logEntries.value.forEach { logEntry ->
+//        calendar.timeInMillis = logEntry.startTimestamp
+//        val hourKey = String.format("%02d:00", calendar.get(Calendar.HOUR_OF_DAY))
+//        hourlyMap[hourKey] = hourlyMap.getOrDefault(hourKey, 0) + 1
+//    }
+
+
+    // Prepare a map with all 24 hours initialized to 0
+    val hourFormat = SimpleDateFormat("hh:00 a", Locale.getDefault())
+    val hourlyMap = (0..23).associate { hour ->
+        // Create a Date object for each hour of the day
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, hour)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        hourFormat.format(calendar.time) to 0
+    }.toMutableMap()
+
+    // Aggregate log entries into the hourly map
+    val calendar = Calendar.getInstance()
+    logEntries.value.forEach { logEntry ->
+        calendar.timeInMillis = logEntry.startTimestamp
+        val hourKey = hourFormat.format(calendar.time)
+        hourlyMap[hourKey] = hourlyMap.getOrDefault(hourKey, 0) + 1
+    }
+
+
+    // Populate the labels and series from the hourly map
+    hourlyMap.forEach { (hour, count) ->
+        logsDateGroups.add(hour)
+        logsSizeSeries.add(count)
+    }
+
+
+    // Trigger Chart data production
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(logsSizeSeries) {
+        modelProducer.runTransaction {
+            columnSeries {
+                if (logsSizeSeries != null) {
+                    series(logsSizeSeries)
+                }
+            }
+        }
+    }
+
+    if (logsDateGroups != null) {
+
+        // Set up Scrolling/Zooming configuration; empty = default
+        val scrollState = rememberVicoScrollState(/* ... */)
+        val zoomState = rememberVicoZoomState(/* ... */)
+
+
+        var axisConfig =
+            generalChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
+
+        val startAxisConfig = axisConfig.first
+        val endAxisConfig = axisConfig.second
+        val topAxisConfig = axisConfig.third.first
+        val bottomAxisConfig = axisConfig.third.second
+        // Set up Axis Configuration; null = no axes
+
+
+        CartesianChartHost(
+            rememberCartesianChart( //Chart Data Provider
+                rememberColumnCartesianLayer( // Chart UI
+                    ColumnCartesianLayer.ColumnProvider.series(
+                        rememberLineComponent(
+                            fill = Fill(Color(MaterialTheme.colorScheme.primary.toArgb()).toArgb()),
+                            thickness = 6.dp,
+                            shape = CorneredShape.rounded(allPercent = 40),
+                        )
+                    )
+                ),
+                startAxis = startAxisConfig,
+                endAxis = endAxisConfig,
+                topAxis = topAxisConfig,
+                bottomAxis = HorizontalAxis.rememberBottom(
+                    labelRotationDegrees = -90f,
+                    valueFormatter = CartesianValueFormatter { _, x, _ ->
+                        logsDateGroups.getOrNull(x.roundToInt()) ?: " " // Ensure safety with getOrNull
+                    }),
+                marker = rememberMarker(DefaultCartesianMarker.LabelPosition.AbovePoint)
+            ),
+            modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier // for entire graph
+                .fillMaxWidth()
+                .height(300.dp)
+                .then(Modifier.graphicsLayer { rotationZ = 0f })
+        )
+
+    }
+}
+
+
+
+@Composable
+fun GeneralChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
 
 
     var (logsDateGroups, logsSizeSeries) = logEntryAggregator(singleChoiceSelectedIndex, logEntries) // x, y
