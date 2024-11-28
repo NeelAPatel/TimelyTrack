@@ -4,7 +4,6 @@ package com.example.timelytrack.ui.history
 
 //import android.graphics.Color
 
-import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -38,34 +37,35 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.Role
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.timelytrack.ui.home.groupLogsByDate
 import com.example.timelytrack.viewmodel.LogViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.State
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.graphicsLayer
 import com.example.timelytrack.model.LogEntry
+import com.example.timelytrack.ui.home.rememberMarker
 
-import com.patrykandpatrick.vico.core.*
-import com.patrykandpatrick.vico.compose.*
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.views.*
-import com.patrykandpatrick.vico.compose.common.*
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.core.cartesian.CartesianLayerInsetter
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.common.component.shapeComponent
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
 import java.text.SimpleDateFormat
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -78,54 +78,74 @@ fun HistoryScreenPreview() {
 
 
 
-
-@Composable
-fun HistoryScreen() {
-
-    Scaffold(
-        content={ innerPadding ->
-            LazyColumn ( modifier = Modifier
-                .padding(innerPadding)){
 //                item { DemoSwipeToDismissBox() }
 //                item { DemoBottomSheet() }
 //                item { DemoTimePickerWithError()}
 //                item{DemoYCharts()}
+@Composable
+fun HistoryScreen() {
 
+    //=== Variables ===
+    var singleChoiceSelectedIndex by remember { mutableStateOf(1) }
+    val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
 
-                item{DemoVicoChart()}
+    // === Launch Effects ===
+
+    // === UI ====
+    Scaffold() { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding).padding(8.dp).fillMaxWidth()
+        ) {
+
+            // Single Choice Selector
+            item {
+                SingleChoiceSegmentedButtonRow () {
+                    singleChoiceSelectorOptions.forEachIndexed { index, label ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = singleChoiceSelectorOptions.size
+                            ),
+                            onClick = { singleChoiceSelectedIndex = index },
+                            selected = index == singleChoiceSelectedIndex
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
             }
-        }
-    )
+            item { DemoVicoChart(singleChoiceSelectedIndex) }
 
+
+
+
+        }
+
+    }
 }
 
 @Composable
-fun DemoVicoChart() {
-
+fun DemoVicoChart(singleChoiceSelectedIndex: Int) {
     val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
     val logEntries = viewModel.allLogEntries.collectAsState()
-    val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
-    val groupedLogs =
-        logEntries.value.groupBy { logEntry -> dateFormat.format(Date(logEntry.startTimestamp)) }
 
-    // Chart configuration
-    val logsDateGroups = mutableListOf<String>() // Extract dates for labels
-    val logsSizeSeries = mutableListOf<Int>() // Extract values for the chart
 
-    groupedLogs.forEach { (key, value) ->
-        // Extract date from the key, e.g., "Monday Nov 21, 2022" -> "Nov 21"
-        val date = key.split(" ").get(0) + " " + key.split(" ").get(1).replace(",", "")
-        logsDateGroups.add(date)
+    var (logsDateGroups, logsSizeSeries) = logEntryAggregator(singleChoiceSelectedIndex, logEntries)
 
-        // Add the size of the LogEntry list to logsSizeSeries
-        logsSizeSeries.add(value.size)
-    }
+
 
     // Chart configuration
     val modelProducer = remember { CartesianChartModelProducer() }
     LaunchedEffect(logsSizeSeries) {
         modelProducer.runTransaction {
-            columnSeries { series(logsSizeSeries) }
+            columnSeries {
+//            lineSeries {
+
+            if (logsSizeSeries != null) {
+                    series(logsSizeSeries)
+                }
+            }
 
         }
     }
@@ -133,29 +153,141 @@ fun DemoVicoChart() {
     LaunchedEffect(logsSizeSeries) {
         modelProducer.runTransaction {
             columnSeries {
-                series(logsSizeSeries) // Pass the log sizes directly as a collection
+//            lineSeries {
+                if (logsSizeSeries != null) {
+                    series(logsSizeSeries)
+                } // Pass the log sizes directly as a collection
             }
         }
     }
 
-    CartesianChartHost(
-        rememberCartesianChart(
-            rememberColumnCartesianLayer(),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom(
-                valueFormatter = CartesianValueFormatter { _, x, _ ->
-                    logsDateGroups.getOrNull(x.roundToInt()) ?: "" // Ensure safety with getOrNull
-                },
-                itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = 1) // Adjust spacing
+    if (logsDateGroups != null) {
+        val scrollState = rememberVicoScrollState(/* ... */)
+        val zoomState = rememberVicoZoomState(/* ... */)
+        CartesianChartHost(
+            rememberCartesianChart(
+                rememberColumnCartesianLayer(),
+//                rememberLineCartesianLayer(),
+
+                startAxis = VerticalAxis.rememberStart( valueFormatter = integer()),
+                bottomAxis = HorizontalAxis.rememberBottom(
+                    labelRotationDegrees = -90f,
+                    valueFormatter = CartesianValueFormatter { _, x, _ ->
+                        logsDateGroups.getOrNull(x.roundToInt()) ?: "X" // Ensure safety with getOrNull
+                    },
+                    itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = 1), // Adjust spacing
+                ),
+                marker = rememberMarker(DefaultCartesianMarker.LabelPosition.Top)
             ),
-        ),
-        modelProducer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-    )
+            modelProducer,
+            scrollState = scrollState, zoomState = zoomState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+                .then(Modifier.graphicsLayer { rotationZ = 0f })
+        )
+    }
 }
 
+/** Formats values to display as integers. */
+public fun integer(): CartesianValueFormatter = object : CartesianValueFormatter {
+    override fun format(
+        context: CartesianMeasuringContext,
+        value: Double,
+        verticalAxisPosition: Axis.Position.Vertical?,
+    ): CharSequence {
+        // Round the value to the nearest integer and return as a string
+        return value.toInt().toString()
+    }
+}
+fun logEntryAggregator (singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>): Pair<MutableList<String>?, MutableList<Int>?> {
+    // Switch case based on index 0,1,2,3 to determine different ways of aggegating logEntries
+    val logsDateGroups = mutableListOf<String>() // Extract dates for labels
+    val logsSizeSeries = mutableListOf<Int>() // Extract values for the chart
+    when (singleChoiceSelectedIndex) {
+        0 -> {
+            logsDateGroups.clear()
+            logsSizeSeries.clear()
+            val dateFormat = SimpleDateFormat("MMM dd, HH a", Locale.getDefault())
+            val groupedLogs = logEntries.value.groupBy { logEntry -> dateFormat.format(Date(logEntry.startTimestamp)) }
+
+            groupedLogs.forEach { (key, value) ->
+                // Extract date from the key, e.g., "Monday Nov 21, 2022" -> "Nov 21"
+//                val date = key.split(" ").get(0) + " " + key.split(" ").get(1).replace(",", "")
+                logsDateGroups.add(key)
+
+                // Add the size of the LogEntry list to logsSizeSeries
+                logsSizeSeries.add(value.size)
+            }
+
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+
+        1 -> {
+
+            logsDateGroups.clear()
+            logsSizeSeries.clear()
+            val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+            val groupedLogs = logEntries.value.groupBy { logEntry -> dateFormat.format(Date(logEntry.startTimestamp)) }
+
+            groupedLogs.forEach { (key, value) ->
+                // Extract date from the key, e.g., "Monday Nov 21, 2022" -> "Nov 21"
+                val date = key.split(" ").get(0) + " " + key.split(" ").get(1).replace(",", "")
+                logsDateGroups.add(date)
+
+                // Add the size of the LogEntry list to logsSizeSeries
+                logsSizeSeries.add(value.size)
+            }
+
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+        2 -> {
+            logsDateGroups.clear()
+            logsSizeSeries.clear()
+            // Weekly breakdown: Format as <Month> <week start date> - <week end date>
+            val weekDateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+            val calendar = Calendar.getInstance()
+            val groupedLogs = logEntries.value.groupBy { logEntry ->
+                // Set the date to the start of the week (Sunday as the start)
+                calendar.time = Date(logEntry.startTimestamp)
+                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                weekDateFormat.format(calendar.time)
+            }
+
+            groupedLogs.forEach { (weekStart, value) ->
+                // Find the week end date (7 days after the week start)
+                calendar.time = SimpleDateFormat("MMM dd", Locale.getDefault()).parse(weekStart)
+                calendar.add(Calendar.DAY_OF_YEAR, 6) // Add 6 days to get the end of the week
+                val weekEnd = weekDateFormat.format(calendar.time)
+
+                // Combine week start and end date into one label
+                val label = "$weekStart - $weekEnd"
+                logsDateGroups.add(label)
+                logsSizeSeries.add(value.size)
+            }
+
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+        3 -> {
+            logsDateGroups.clear()
+            logsSizeSeries.clear()
+            // Monthly breakdown: Format as <Month> (e.g., "Jan", "Feb")
+            val monthDateFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault()) // Include year to differentiate between same months in different years
+            val groupedLogs = logEntries.value.groupBy { logEntry ->
+                // Get only the month and year (e.g., "Jan 2024")
+                monthDateFormat.format(Date(logEntry.startTimestamp))
+            }
+
+            groupedLogs.forEach { (monthYear, value) ->
+                logsDateGroups.add(monthYear)  // Month (e.g., "Jan", "Feb") or "Jan 2024"
+                logsSizeSeries.add(value.size)  // Log count for that month
+            }
+
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+    }
+    return Pair(logsDateGroups, logsSizeSeries)
+}
 
 
 // ===============================================================================================================================================
@@ -391,31 +523,31 @@ fun DemoBottomSheet() {
     }
 }
 
-
-@Preview
-@Composable
-fun ColorSchemePreview() {
-    MaterialTheme {
-        Column {
-            ColorDisplay(color = MaterialTheme.colorScheme.tertiary, name = "primary")
-            ColorDisplay(color = MaterialTheme.colorScheme.onPrimary, name = "onPrimary")
-            ColorDisplay(color = MaterialTheme.colorScheme.primaryContainer, name = "primaryContainer")
-            // ... display other colors similarly
-        }
-    }
-}
-
-@Composable
-fun ColorDisplay(color: Color, name: String) {
-    Box(
-        modifier = Modifier
-            .size(100.dp)
-            .background(color),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = name, color = Color.White)
-    }
-}
+//
+//@Preview
+//@Composable
+//fun ColorSchemePreview() {
+//    MaterialTheme {
+//        Column {
+//            ColorDisplay(color = MaterialTheme.colorScheme.tertiary, name = "primary")
+//            ColorDisplay(color = MaterialTheme.colorScheme.onPrimary, name = "onPrimary")
+//            ColorDisplay(color = MaterialTheme.colorScheme.primaryContainer, name = "primaryContainer")
+//            // ... display other colors similarly
+//        }
+//    }
+//}
+//
+//@Composable
+//fun ColorDisplay(color: Color, name: String) {
+//    Box(
+//        modifier = Modifier
+//            .size(100.dp)
+//            .background(color),
+//        contentAlignment = Alignment.Center
+//    ) {
+//        Text(text = name, color = Color.White)
+//    }
+//}
 
 //
 //

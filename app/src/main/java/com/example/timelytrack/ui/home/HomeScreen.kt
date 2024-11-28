@@ -90,10 +90,10 @@ fun HomeScreen() {
             .collect { (visibleItemsInfo)->
                 // == fab control ==
 
-                if (logEntries.value.isEmpty()) {
-                    isFabVisible = true
-                    return@collect
-                }
+//                if (logEntries.value.isEmpty()) {
+//                    isFabVisible = true
+//                    return@collect
+//                }
 
                 val lastIndex = logEntries.value.size - 1
                 val isLastItemVisible = visibleItemsInfo.any { it.index == lastIndex }
@@ -113,26 +113,26 @@ fun HomeScreen() {
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
         floatingActionButton = {
-                SmallFloatingActionButton(
-                    onClick = {
-                        viewModel.addLogEntryWithManualDate("1", "Nov 21 2022", "10:00")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 21 2022", "15:00")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "09:30")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "13:45")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "09:30")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "13:45")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "13:45")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
-                        viewModel.addLogEntryWithManualDate("1", "Nov 24 2022", "13:45")
-
-                    },
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                ) {
-
-                }
+//                SmallFloatingActionButton(
+//                    onClick = {
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 21 2022", "10:00")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 21 2022", "15:00")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "13:45")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "13:45")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "13:45")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 24 2022", "13:45")
+//
+//                    },
+//                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+//                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+//                ) {
+//
+//                }
 
                 FABComponent(viewModel = viewModel,
                     isFabVisible = isFabVisible,
