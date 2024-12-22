@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowRightAlt
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -78,23 +79,23 @@ fun HistoryScreen() {
     var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(logEntries.value.map { it.startTimestamp }.sorted().first() to logEntries.value.map { it.startTimestamp }.sorted().last()) }
     var showSelectedDateRangeModal by remember { mutableStateOf(false) }
 
+    // Future Visbility modifiers
+        // show Empty days?
+        // show All data?
 
-
-
-    //=== Variables ===
+    // For Aggregation Filter
     var singleChoiceSelectedIndex by remember { mutableStateOf(1) }
     val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
-// [END_EXCLUDE]
-    // === Launch Effects ===
 
     // === UI ====
     Scaffold() { innerPadding ->
         LazyColumn(
             modifier = Modifier.padding(innerPadding).padding(12.dp)
         ) {
+
+            // Row for Date Range Selector + Filter
             item{
                 DateRangeSelectorComposable(selectedDateRange = selectedDateRange, onClick = {showSelectedDateRangeModal = true})
-
                 if (showSelectedDateRangeModal) {
                     DateRangePickerModal(
                         onDateRangeSelected = {
@@ -104,39 +105,24 @@ fun HistoryScreen() {
                         onDismiss = { showSelectedDateRangeModal = false }
                     )
                 }
+
+
+                AggregationFilterSelectorComposable(singleChoiceSelectorOptions, singleChoiceSelectedIndex)
             }
+
+            // Box for Aggregation Chart
             item {
-                Box(
-                ) {
+                Box() {
                     AggregationChart(singleChoiceSelectedIndex, logEntries = logEntries, selectedDateRange = selectedDateRange)
                 }
             }
-            item {
-                SingleChoiceSegmentedButtonRow () {
-                    singleChoiceSelectorOptions.forEachIndexed { index, label ->
-                        SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = singleChoiceSelectorOptions.size
-                            ),
-                            onClick = { singleChoiceSelectedIndex = index },
-                            selected = index == singleChoiceSelectedIndex
-                        ) {
-                            Text(label)
-                        }
-                    }
-                }
+            item{Spacer(modifier = Modifier.height(20.dp))
+                androidx.compose.material.Divider()
             }
 
-            item{Spacer(modifier = Modifier.height(20.dp))}
-            item{ androidx.compose.material.Divider()}
-
-            item {Text("Hourly Aggregate")}
             item {
+                Text("Hourly Aggregate")
                 Box(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-////                        .height(300.dp)
                 ) {
                     HourlyDistributionChart(singleChoiceSelectedIndex, logEntries = logEntries)
                 }
@@ -144,6 +130,44 @@ fun HistoryScreen() {
 
         }
 
+    }
+}
+
+@Composable
+private fun AggregationFilterSelectorComposable(
+    singleChoiceSelectorOptions: List<String>,
+    singleChoiceSelectedIndex: Int
+) {
+    var singleChoiceSelectedIndex1 = singleChoiceSelectedIndex
+    Row(
+        //center aligns content
+        modifier = Modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.FilterList,
+            contentDescription = "Filter",
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+        )
+
+
+        SingleChoiceSegmentedButtonRow(
+            Modifier.fillMaxWidth(),
+        ) {
+            singleChoiceSelectorOptions.forEachIndexed { index, label ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = singleChoiceSelectorOptions.size
+                    ),
+                    onClick = { singleChoiceSelectedIndex1 = index },
+                    selected = index == singleChoiceSelectedIndex1
+                ) {
+                    Text(label)
+                }
+            }
+        }
     }
 }
 
@@ -156,25 +180,26 @@ private fun DateRangeSelectorComposable(
         //center aligns content
         modifier = Modifier
             .fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
+//        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Icon(
+            Icons.Filled.CalendarMonth,
+            contentDescription = "Range Calendar",
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+        )
         OutlinedButton(
             onClick = onClick,
-            modifier = Modifier.padding(8.dp),
+//            modifier = Modifier.padding(8.dp),
         ) {
-            Icon(
-                Icons.Filled.CalendarMonth,
-                contentDescription = "Range Calendar",
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text(selectedDateRange.first.toString())
+
+            Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(selectedDateRange.first!!)))
             Icon(
                 Icons.Filled.ArrowRightAlt,
                 contentDescription = "Right Arrow",
                 modifier = Modifier.padding(start = 8.dp, end = 8.dp)
             )
-            Text(selectedDateRange.second.toString())
+            Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(selectedDateRange.second!!)))
         }
     }
 }
