@@ -4,6 +4,7 @@ package com.example.timelytrack.ui.history
 
 //import android.graphics.Color
 
+import android.util.Log
 import android.widget.Space
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -23,7 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timelytrack.viewmodel.LogViewModel
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowRightAlt
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.runtime.State
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -66,24 +72,47 @@ fun HistoryScreenPreview() {
 }
 @Composable
 fun HistoryScreen() {
+    // Variables
+    // For date range selector
+    var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(null to null) }
+    var showSelectedDateRangeModal by remember { mutableStateOf(false) }
+
+
+
 
     //=== Variables ===
     var singleChoiceSelectedIndex by remember { mutableStateOf(1) }
     val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
     val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
     val logEntries = viewModel.allLogEntries.collectAsState()
-
+// [END_EXCLUDE]
     // === Launch Effects ===
 
     // === UI ====
     Scaffold() { innerPadding ->
         LazyColumn(
-            modifier = Modifier.padding(innerPadding).padding(16.dp)
+            modifier = Modifier.padding(innerPadding).padding(12.dp)
         ) {
-            item {Text("Overall History")}
+            item{
+                DateRangeSelectorComposable(selectedDateRange = selectedDateRange, onClick = {showSelectedDateRangeModal = true})
+
+                if (showSelectedDateRangeModal) {
+                    DateRangePickerModal(
+                        onDateRangeSelected = {
+                            selectedDateRange = it
+                            showSelectedDateRangeModal = false
+                        },
+                        onDismiss = { showSelectedDateRangeModal = false }
+                    )
+                }
+            }
             // Single Choice Selector
 
             // Graph 1
+
+
+
+
             item {
                 Box(
 //                    modifier = Modifier
@@ -128,6 +157,90 @@ fun HistoryScreen() {
 
     }
 }
+
+@Composable
+private fun DateRangeSelectorComposable(
+    onClick: () -> Unit,
+    selectedDateRange: Pair<Long?, Long?>
+) {
+    Row(
+        //center aligns content
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = Modifier.padding(8.dp),
+        ) {
+            Icon(
+                Icons.Filled.CalendarMonth,
+                contentDescription = "Range Calendar",
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text(selectedDateRange.first.toString())
+            Icon(
+                Icons.Filled.ArrowRightAlt,
+                contentDescription = "Right Arrow",
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+            )
+            Text(selectedDateRange.second.toString())
+        }
+    }
+
+    //                DateRangePickerModal(onDateRangeSelected = {
+//                    selectedDateRange = it
+////                    showRangeModel = false
+//                }) { }
+}
+
+@Composable
+fun DateRangePickerModal(
+    onDateRangeSelected: (Pair<Long?, Long?>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val dateRangePickerState = rememberDateRangePickerState()
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDateRangeSelected(
+                        Pair(
+                            dateRangePickerState.selectedStartDateMillis,
+                            dateRangePickerState.selectedEndDateMillis
+                        )
+                    )
+                    onDismiss()
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    ) {
+        DateRangePicker(
+            state = dateRangePickerState,
+            title = {
+                Text(
+                    text = "Select date range"
+                )
+            },
+            showModeToggle = false,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(500.dp)
+                .padding(16.dp)
+        )
+    }
+}
+
 
 @Composable
 fun HourAggregateChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
@@ -380,7 +493,12 @@ public fun integer(): CartesianValueFormatter = object : CartesianValueFormatter
 fun logEntryAggregator (singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>): Pair<MutableList<String>?, MutableList<Int>?> {
     // Switch case based on index 0,1,2,3 to determine different ways of aggegating logEntries
     val logsDateGroups = mutableListOf<String>() // Extract dates for labels
+
     val logsSizeSeries = mutableListOf<Int>() // Extract values for the chart
+
+
+
+
     when (singleChoiceSelectedIndex) {
         0 -> {
             // Hourly breakdown: Format as <Hour> <AM/PM>
@@ -400,8 +518,40 @@ fun logEntryAggregator (singleChoiceSelectedIndex: Int, logEntries: State<List<L
 
             return Pair(logsDateGroups, logsSizeSeries)
         }
-
         1 -> {
+            // Daily breakdown: Format as <Month> <Day>
+            val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+            val allDates = mutableListOf<String>()
+
+            // Find the range of dates from the log entries
+            if (logEntries.value.isNotEmpty()) {
+                val sortedTimestamps = logEntries.value.map { it.startTimestamp }.sorted()
+                val startDate = Calendar.getInstance().apply { time = Date(sortedTimestamps.first()) }
+                val endDate = Calendar.getInstance().apply { time = Date(sortedTimestamps.last()) }
+
+                // Generate all dates within the range
+                while (startDate <= endDate) {
+                    allDates.add(dateFormat.format(startDate.time))
+                    startDate.add(Calendar.DATE, 1) // Increment by 1 day
+                }
+            }
+
+            // Group the logs by date
+            val groupedLogs = logEntries.value.groupBy { logEntry ->
+                dateFormat.format(Date(logEntry.startTimestamp))
+            }
+
+            // Fill in the logsDateGroups and logsSizeSeries, accounting for missing dates
+            allDates.forEach { date ->
+                logsDateGroups.add(date)
+                logsSizeSeries.add(groupedLogs[date]?.size ?: 0) // Add 0 if no logs for the date
+            }
+
+            Log.e("logsDateGroups", logsDateGroups.toString())
+            Log.e("logsSizeSeries", logsSizeSeries.toString())
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+        -1 -> {
             // Daily breakdown: Format as <Month> <Day>
             logsDateGroups.clear()
             logsSizeSeries.clear()
@@ -416,7 +566,8 @@ fun logEntryAggregator (singleChoiceSelectedIndex: Int, logEntries: State<List<L
                 // Add the size of the LogEntry list to logsSizeSeries
                 logsSizeSeries.add(value.size)
             }
-
+            Log.e("logsDateGroups", logsDateGroups.toString())
+            Log.e("logsSizeSeries", logsSizeSeries.toString())
             return Pair(logsDateGroups, logsSizeSeries)
         }
         2 -> {
@@ -466,6 +617,8 @@ fun logEntryAggregator (singleChoiceSelectedIndex: Int, logEntries: State<List<L
             return Pair(logsDateGroups, logsSizeSeries)
         }
     }
+
+
     return Pair(logsDateGroups, logsSizeSeries)
 }
 
