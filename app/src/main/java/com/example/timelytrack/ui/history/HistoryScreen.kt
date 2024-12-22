@@ -5,7 +5,6 @@ package com.example.timelytrack.ui.history
 //import android.graphics.Color
 
 import android.util.Log
-import android.widget.Space
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowRightAlt
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -45,9 +43,7 @@ import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEnd
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberTop
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
@@ -73,8 +69,13 @@ fun HistoryScreenPreview() {
 @Composable
 fun HistoryScreen() {
     // Variables
+
+    // Database
+    val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
+    val logEntries = viewModel.allLogEntries.collectAsState()
+
     // For date range selector
-    var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(null to null) }
+    var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(logEntries.value.map { it.startTimestamp }.sorted().first() to logEntries.value.map { it.startTimestamp }.sorted().last()) }
     var showSelectedDateRangeModal by remember { mutableStateOf(false) }
 
 
@@ -83,8 +84,6 @@ fun HistoryScreen() {
     //=== Variables ===
     var singleChoiceSelectedIndex by remember { mutableStateOf(1) }
     val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
-    val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
-    val logEntries = viewModel.allLogEntries.collectAsState()
 // [END_EXCLUDE]
     // === Launch Effects ===
 
@@ -106,20 +105,10 @@ fun HistoryScreen() {
                     )
                 }
             }
-            // Single Choice Selector
-
-            // Graph 1
-
-
-
-
             item {
                 Box(
-//                    modifier = Modifier
-////                        .height(300.dp)
-//                        .fillMaxWidth()
                 ) {
-                    GeneralChart(singleChoiceSelectedIndex, logEntries = logEntries)
+                    AggregationChart(singleChoiceSelectedIndex, logEntries = logEntries, selectedDateRange = selectedDateRange)
                 }
             }
             item {
@@ -149,7 +138,7 @@ fun HistoryScreen() {
 //                        .fillMaxWidth()
 ////                        .height(300.dp)
                 ) {
-                    HourAggregateChart(singleChoiceSelectedIndex, logEntries = logEntries)
+                    HourlyDistributionChart(singleChoiceSelectedIndex, logEntries = logEntries)
                 }
             }
 
@@ -188,11 +177,6 @@ private fun DateRangeSelectorComposable(
             Text(selectedDateRange.second.toString())
         }
     }
-
-    //                DateRangePickerModal(onDateRangeSelected = {
-//                    selectedDateRange = it
-////                    showRangeModel = false
-//                }) { }
 }
 
 @Composable
@@ -243,7 +227,7 @@ fun DateRangePickerModal(
 
 
 @Composable
-fun HourAggregateChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
+fun HourlyDistributionChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
     val logsDateGroups = mutableListOf<String>() // Labels for the chart
     val logsSizeSeries = mutableListOf<Int>() // Values for the chart
 
@@ -342,10 +326,14 @@ fun HourAggregateChart(singleChoiceSelectedIndex: Int, logEntries: State<List<Lo
 
 
 @Composable
-fun GeneralChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
+fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>, selectedDateRange: Pair<Long?, Long?>) {
 
 
-    var (logsDateGroups, logsSizeSeries) = logEntryAggregator(singleChoiceSelectedIndex, logEntries) // x, y
+    var (logsDateGroups, logsSizeSeries) = logEntryAggregator(
+        singleChoiceSelectedIndex,
+        logEntries,
+        selectedDateRange
+    ) // x, y
 
 
 
@@ -490,7 +478,11 @@ public fun integer(): CartesianValueFormatter = object : CartesianValueFormatter
 }
 
 
-fun logEntryAggregator (singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>): Pair<MutableList<String>?, MutableList<Int>?> {
+fun logEntryAggregator (
+    singleChoiceSelectedIndex: Int,
+    logEntries: State<List<LogEntry>>,
+    selectedDateRange: Pair<Long?, Long?>
+): Pair<MutableList<String>?, MutableList<Int>?> {
     // Switch case based on index 0,1,2,3 to determine different ways of aggegating logEntries
     val logsDateGroups = mutableListOf<String>() // Extract dates for labels
 
@@ -523,28 +515,31 @@ fun logEntryAggregator (singleChoiceSelectedIndex: Int, logEntries: State<List<L
             val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
             val allDates = mutableListOf<String>()
 
-            // Find the range of dates from the log entries
-            if (logEntries.value.isNotEmpty()) {
-                val sortedTimestamps = logEntries.value.map { it.startTimestamp }.sorted()
-                val startDate = Calendar.getInstance().apply { time = Date(sortedTimestamps.first()) }
-                val endDate = Calendar.getInstance().apply { time = Date(sortedTimestamps.last()) }
+            if (logEntries.value.isNotEmpty() && selectedDateRange.first != null && selectedDateRange.second != null) {
+                val startTimestamp = selectedDateRange.first!!
+                val endTimestamp = selectedDateRange.second!!
 
-                // Generate all dates within the range
+                val startDate = Calendar.getInstance().apply { time = Date(startTimestamp) }
+                val endDate = Calendar.getInstance().apply { time = Date(endTimestamp) }
+
+                // Generate all dates within the selected date range
                 while (startDate <= endDate) {
                     allDates.add(dateFormat.format(startDate.time))
                     startDate.add(Calendar.DATE, 1) // Increment by 1 day
                 }
-            }
 
-            // Group the logs by date
-            val groupedLogs = logEntries.value.groupBy { logEntry ->
-                dateFormat.format(Date(logEntry.startTimestamp))
-            }
+                // Group the logs by date within the selected range
+                val groupedLogs = logEntries.value
+                    .filter { it.startTimestamp in selectedDateRange.first!!..selectedDateRange.second!! }
+                    .groupBy { logEntry ->
+                        dateFormat.format(Date(logEntry.startTimestamp))
+                    }
 
-            // Fill in the logsDateGroups and logsSizeSeries, accounting for missing dates
-            allDates.forEach { date ->
-                logsDateGroups.add(date)
-                logsSizeSeries.add(groupedLogs[date]?.size ?: 0) // Add 0 if no logs for the date
+                // Fill in the logsDateGroups and logsSizeSeries, accounting for missing dates
+                allDates.forEach { date ->
+                    logsDateGroups.add(date)
+                    logsSizeSeries.add(groupedLogs[date]?.size ?: 0) // Add 0 if no logs for the date
+                }
             }
 
             Log.e("logsDateGroups", logsDateGroups.toString())
