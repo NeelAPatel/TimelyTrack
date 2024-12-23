@@ -25,6 +25,7 @@ import com.example.timelytrack.viewmodel.LogViewModel
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowRightAlt
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FilterList
@@ -82,7 +83,33 @@ fun HistoryScreen() {
     //get user data
 
     // For date range selector
-    var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(logEntries.value.map { it.startTimestamp }.sorted().first() to logEntries.value.map { it.startTimestamp }.sorted().last()) }
+    val startOfToday: Long = Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis()
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    val endOfToday: Long = Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis()
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }.timeInMillis
+
+    val startOfRange: Long = Calendar.getInstance().apply {
+        timeInMillis = startOfToday
+        add(Calendar.DAY_OF_YEAR, -30) // Go back 30 days
+    }.timeInMillis
+
+
+    var selectedDateRange by remember {
+        mutableStateOf<Pair<Long?, Long?>>(
+            startOfRange to endOfToday // Default: Last 30 days, inclusive of today
+        )
+    }
+//    var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(logEntries.value.map { it.startTimestamp }.sorted().first() to logEntries.value.map { it.startTimestamp }.sorted().last()) }
     var showSelectedDateRangeModal by remember { mutableStateOf(false) }
     var showDataVisibilityAdjustmentModal by remember { mutableStateOf(false) }
 
@@ -93,7 +120,7 @@ fun HistoryScreen() {
         // show All data?
 
     // For Aggregation Filter
-    var singleChoiceSelectedIndex by remember { mutableStateOf(1) }
+    var singleChoiceSelectedIndex by remember { mutableStateOf(1) } // default is daily
     val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
 
     // === UI ====
@@ -104,17 +131,22 @@ fun HistoryScreen() {
 
             // Row for Date Range Selector + Filter
             item{
-                DateRangeSelectorComposable(selectedDateRange = selectedDateRange, onDateRangeClick = {showSelectedDateRangeModal = true}, onDataVisibilityClick = {showDataVisibilityAdjustmentModal = true})
+                DateRangeSelectorComposable(
+                    selectedDateRange = selectedDateRange,
+                    onDateRangeClick = {showSelectedDateRangeModal = true},
+                    onDataVisibilityClick = {showDataVisibilityAdjustmentModal = true})
                 AggregationFilterSelectorComposable(singleChoiceSelectorOptions, singleChoiceSelectedIndex)
 
                 if (showSelectedDateRangeModal) {
                     DateRangePickerModal(
+                        initialDateRange = selectedDateRange, // Pass current range to modal
                         onDateRangeSelected = {
-                            selectedDateRange = it
-                            showSelectedDateRangeModal = false
+                            selectedDateRange = it // Update the selected date range
+                            showSelectedDateRangeModal = false // Close the modal
                         },
                         onDismiss = { showSelectedDateRangeModal = false }
                     )
+
                 }
 
                 if (showDataVisibilityAdjustmentModal) {
@@ -334,49 +366,134 @@ private fun DateRangeSelectorComposable(
 
 @Composable
 fun DateRangePickerModal(
+    initialDateRange: Pair<Long?, Long?>,
     onDateRangeSelected: (Pair<Long?, Long?>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val dateRangePickerState = rememberDateRangePickerState()
+    val dateRangePickerState = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = initialDateRange.first,
+        initialSelectedEndDateMillis = initialDateRange.second
+    )
 
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onDateRangeSelected(
-                        Pair(
-                            dateRangePickerState.selectedStartDateMillis,
-                            dateRangePickerState.selectedEndDateMillis
-                        )
-                    )
-                    onDismiss()
-                }
-            ) {
-                Text("OK")
+    Dialog(onDismissRequest = onDismiss) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Select Date Range") },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        TextButton(
+                            onClick = {
+                                onDateRangeSelected(
+                                    Pair(
+                                        dateRangePickerState.selectedStartDateMillis?.plus(24L * 60 * 60 * 1000),
+                                        dateRangePickerState.selectedEndDateMillis?.plus(24L * 60 * 60 * 1000)
+                                    )
+                                )
+                                onDismiss()
+                            }
+                        ) {
+                            Text("Apply")
+                        }
+                    }
+                )
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                DateRangePicker(
+                    state = dateRangePickerState,
+                    title = {
+                        Text(
+                            text = "Select date range",
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    },
+                    showModeToggle = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
             }
         }
-    ) {
-        DateRangePicker(
-            state = dateRangePickerState,
-            title = {
-                Text(
-                    text = "Select date range"
-                )
-            },
-            showModeToggle = false,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(500.dp)
-                .padding(16.dp)
-        )
     }
 }
+
+@Composable
+fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>, selectedDateRange: Pair<Long?, Long?>) {
+
+    var (logsDateGroups, logsSizeSeries) = logEntryAggregator(
+        singleChoiceSelectedIndex,
+        logEntries,
+        selectedDateRange
+    ) // x, y
+
+
+    // Trigger Chart data production
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(logsSizeSeries) {
+        modelProducer.runTransaction {
+            columnSeries {
+                if (logsSizeSeries != null) { series(logsSizeSeries)}
+            }
+        }
+    }
+
+    if (logsDateGroups != null)
+    {
+
+        // Set up Scrolling/Zooming configuration; empty = default
+        val scrollState = rememberVicoScrollState(/* ... */)
+        val zoomState = rememberVicoZoomState(/* ... */)
+
+
+        var axisConfig = AggregationChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
+
+        val startAxisConfig = axisConfig.first
+        val endAxisConfig = axisConfig.second
+        val topAxisConfig = axisConfig.third.first
+        val bottomAxisConfig = axisConfig.third.second
+        // Set up Axis Configuration; null = no axes
+
+
+        CartesianChartHost(
+            rememberCartesianChart( //Chart Data Provider
+                rememberColumnCartesianLayer( // Chart UI
+                    ColumnCartesianLayer.ColumnProvider.series(
+                        rememberLineComponent(
+                            fill = Fill(Color(MaterialTheme.colorScheme.primary.toArgb()).toArgb()),
+                            thickness = 6.dp,
+                            shape = CorneredShape.rounded(allPercent = 40),
+                        )
+                    )
+                ),
+                startAxis = startAxisConfig,
+                endAxis = endAxisConfig,
+                topAxis = topAxisConfig,
+                bottomAxis = bottomAxisConfig,
+                marker = rememberMarker(DefaultCartesianMarker.LabelPosition.AbovePoint)
+            ),
+            modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier // for entire graph
+                .fillMaxWidth()
+                .height(300.dp)
+                .then(Modifier.graphicsLayer { rotationZ = 0f })
+        )
+    }
+    else{
+        Text("No data to display")
+    }
+}
+
 
 
 @Composable
@@ -432,7 +549,7 @@ fun HourlyDistributionChart(singleChoiceSelectedIndex: Int, logEntries: State<Li
 
 
         var axisConfig =
-            generalChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
+            AggregationChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
 
         val startAxisConfig = axisConfig.first
         val endAxisConfig = axisConfig.second
@@ -476,80 +593,22 @@ fun HourlyDistributionChart(singleChoiceSelectedIndex: Int, logEntries: State<Li
     }
 }
 
-
-
-@Composable
-fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>, selectedDateRange: Pair<Long?, Long?>) {
-
-
-    var (logsDateGroups, logsSizeSeries) = logEntryAggregator(
-        singleChoiceSelectedIndex,
-        logEntries,
-        selectedDateRange
-    ) // x, y
-
-
-
-    // Trigger Chart data production
-    val modelProducer = remember { CartesianChartModelProducer() }
-    LaunchedEffect(logsSizeSeries) {
-        modelProducer.runTransaction {
-            columnSeries {
-                if (logsSizeSeries != null) { series(logsSizeSeries)}
-            }
-        }
-    }
-
-    if (logsDateGroups != null)
-    {
-
-        // Set up Scrolling/Zooming configuration; empty = default
-        val scrollState = rememberVicoScrollState(/* ... */)
-        val zoomState = rememberVicoZoomState(/* ... */)
-
-
-        var axisConfig = generalChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
-
-        val startAxisConfig = axisConfig.first
-        val endAxisConfig = axisConfig.second
-        val topAxisConfig = axisConfig.third.first
-        val bottomAxisConfig = axisConfig.third.second
-        // Set up Axis Configuration; null = no axes
-
-
-        CartesianChartHost(
-            rememberCartesianChart( //Chart Data Provider
-                rememberColumnCartesianLayer( // Chart UI
-                    ColumnCartesianLayer.ColumnProvider.series(
-                        rememberLineComponent(
-                            fill = Fill(Color(MaterialTheme.colorScheme.primary.toArgb()).toArgb()),
-                            thickness = 6.dp,
-                            shape = CorneredShape.rounded(allPercent = 40),
-                        )
-                    )
-                ),
-                startAxis = startAxisConfig,
-                endAxis = endAxisConfig,
-                topAxis = topAxisConfig,
-                bottomAxis = bottomAxisConfig,
-                marker = rememberMarker(DefaultCartesianMarker.LabelPosition.AbovePoint)
-            ),
-            modelProducer,
-            scrollState = scrollState,
-            zoomState = zoomState,
-            modifier = Modifier // for entire graph
-                .fillMaxWidth()
-                .height(300.dp)
-                .then(Modifier.graphicsLayer { rotationZ = 0f })
-        )
-    }
-    else{
-        Text("No data to display")
+/** Formats values to display as integers. */
+public fun integer(): CartesianValueFormatter = object : CartesianValueFormatter {
+    override fun format(
+        context: CartesianMeasuringContext,
+        value: Double,
+        verticalAxisPosition: Axis.Position.Vertical?,
+    ): CharSequence {
+        // Round the value to the nearest integer and return as a string
+        return value.toInt().toString()
     }
 }
 
+
+/** Formats axes for the first graph **/
 @Composable
-fun generalChartAxesConfigurator(logsDateGroups: MutableList<String>, logsSizeSeries: MutableList<Int>?, singleChoiceSelectedIndex: Int):
+fun AggregationChartAxesConfigurator(logsDateGroups: MutableList<String>, logsSizeSeries: MutableList<Int>?, singleChoiceSelectedIndex: Int):
         Triple<VerticalAxis<Axis.Position.Vertical.Start>?, VerticalAxis<Axis.Position.Vertical.End>?, Pair<HorizontalAxis<Axis.Position.Horizontal.Top>?, HorizontalAxis<Axis.Position.Horizontal.Bottom>?>> {
 
 
@@ -618,17 +677,6 @@ fun generalChartAxesConfigurator(logsDateGroups: MutableList<String>, logsSizeSe
     return axisConfig
 }
 
-/** Formats values to display as integers. */
-public fun integer(): CartesianValueFormatter = object : CartesianValueFormatter {
-    override fun format(
-        context: CartesianMeasuringContext,
-        value: Double,
-        verticalAxisPosition: Axis.Position.Vertical?,
-    ): CharSequence {
-        // Round the value to the nearest integer and return as a string
-        return value.toInt().toString()
-    }
-}
 
 
 fun logEntryAggregator (
@@ -637,8 +685,9 @@ fun logEntryAggregator (
     selectedDateRange: Pair<Long?, Long?>
 ): Pair<MutableList<String>?, MutableList<Int>?> {
     // Switch case based on index 0,1,2,3 to determine different ways of aggegating logEntries
-    val logsDateGroups = mutableListOf<String>() // Extract dates for labels
 
+    //Empty
+    val logsDateGroups = mutableListOf<String>() // Extract dates for labels
     val logsSizeSeries = mutableListOf<Int>() // Extract values for the chart
 
 
