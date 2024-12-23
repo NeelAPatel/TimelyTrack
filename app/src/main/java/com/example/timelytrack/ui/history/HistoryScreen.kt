@@ -23,15 +23,19 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timelytrack.viewmodel.LogViewModel
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowRightAlt
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
 import com.example.timelytrack.model.LogEntry
 
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -75,12 +79,17 @@ fun HistoryScreen() {
     val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
     val logEntries = viewModel.allLogEntries.collectAsState()
 
+    //get user data
+
     // For date range selector
     var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(logEntries.value.map { it.startTimestamp }.sorted().first() to logEntries.value.map { it.startTimestamp }.sorted().last()) }
     var showSelectedDateRangeModal by remember { mutableStateOf(false) }
+    var showDataVisibilityAdjustmentModal by remember { mutableStateOf(false) }
 
     // Future Visbility modifiers
         // show Empty days?
+    var showEmptyDays by remember { mutableStateOf(false) }
+    var showFullDataRange by remember { mutableStateOf(false) }
         // show All data?
 
     // For Aggregation Filter
@@ -95,7 +104,9 @@ fun HistoryScreen() {
 
             // Row for Date Range Selector + Filter
             item{
-                DateRangeSelectorComposable(selectedDateRange = selectedDateRange, onClick = {showSelectedDateRangeModal = true})
+                DateRangeSelectorComposable(selectedDateRange = selectedDateRange, onDateRangeClick = {showSelectedDateRangeModal = true}, onDataVisibilityClick = {showDataVisibilityAdjustmentModal = true})
+                AggregationFilterSelectorComposable(singleChoiceSelectorOptions, singleChoiceSelectedIndex)
+
                 if (showSelectedDateRangeModal) {
                     DateRangePickerModal(
                         onDateRangeSelected = {
@@ -106,8 +117,19 @@ fun HistoryScreen() {
                     )
                 }
 
-
-                AggregationFilterSelectorComposable(singleChoiceSelectorOptions, singleChoiceSelectedIndex)
+                if (showDataVisibilityAdjustmentModal) {
+                    DataVisibilityAdjustmentModal(
+                        onDismiss = { showDataVisibilityAdjustmentModal = false },
+                        showEmptyDays = showEmptyDays,
+                        onShowEmptyDaysChecked = { isChecked ->
+                            showEmptyDays = isChecked // Update the state for "Show Empty Days"
+                        },
+                        showFullDataRange = showFullDataRange,
+                        onShowFullDataRangeChecked = { isChecked ->
+                            showFullDataRange = isChecked // Update the state for "Show Full Data Range"
+                        }
+                    )
+                }
             }
 
             // Box for Aggregation Chart
@@ -130,6 +152,100 @@ fun HistoryScreen() {
 
         }
 
+    }
+}
+
+@Composable
+fun DataVisibilityAdjustmentModal(
+    onDismiss: () -> Unit,
+    showEmptyDays: Boolean,
+    onShowEmptyDaysChecked: (Boolean) -> Unit,
+    showFullDataRange: Boolean,
+    onShowFullDataRangeChecked: (Boolean) -> Unit
+) {
+
+    Dialog(onDismiss) {
+        // Draw a rectangle shape with rounded corners inside the dialog
+        Card(
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .defaultMinSize(minWidth = 280.dp) // Minimum width of 280dp
+                .then(Modifier.widthIn(min = 280.dp, max = 560.dp)), // Width range: 280dp to 560dp
+            shape = RoundedCornerShape(28.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp) // Top/Left/Right/Bottom padding of 24dp
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Adjust Data Visibility",
+                    style = MaterialTheme.typography.titleLarge, // Material 3 title style
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp), // Padding between title and body
+                    textAlign = TextAlign.Start
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically // Align content vertically
+                    ) {
+                        Checkbox(
+                            checked = showEmptyDays,
+                            onCheckedChange = { isChecked ->
+                                onShowEmptyDaysChecked(isChecked)
+                            }
+                        )
+                        Text(
+                            text = "Show Empty Days",
+                            modifier = Modifier.padding(start = 8.dp) // Padding between checkbox and text
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically // Align content vertically
+                    ) {
+                        Checkbox(
+                            checked = showFullDataRange,
+                            onCheckedChange = { isChecked ->
+                                onShowFullDataRangeChecked(isChecked)
+                            }
+                        )
+                        Text(
+                            text = "Show All Data",
+                            modifier = Modifier.padding(start = 8.dp) // Padding between checkbox and text
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(
+                        onClick = { onDismiss() },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Dismiss")
+                    }
+                    TextButton(
+                        onClick = { onDismiss() },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Confirm")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -173,8 +289,9 @@ private fun AggregationFilterSelectorComposable(
 
 @Composable
 private fun DateRangeSelectorComposable(
-    onClick: () -> Unit,
-    selectedDateRange: Pair<Long?, Long?>
+    onDateRangeClick: () -> Unit,
+    selectedDateRange: Pair<Long?, Long?>,
+    onDataVisibilityClick: () -> Unit
 ) {
     Row(
         //center aligns content
@@ -189,7 +306,7 @@ private fun DateRangeSelectorComposable(
             modifier = Modifier.padding(start = 8.dp, end = 8.dp)
         )
         OutlinedButton(
-            onClick = onClick,
+            onClick = onDateRangeClick,
 //            modifier = Modifier.padding(8.dp),
         ) {
 
@@ -200,6 +317,17 @@ private fun DateRangeSelectorComposable(
                 modifier = Modifier.padding(start = 8.dp, end = 8.dp)
             )
             Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(selectedDateRange.second!!)))
+        }
+
+        Spacer(modifier = Modifier.weight(1f)) // Pushes the next item to the right
+        IconButton(
+            onClick = onDataVisibilityClick
+        ) {
+            Icon(
+                Icons.Filled.Visibility,
+                contentDescription = "Data Visibility",
+                modifier = Modifier.padding(8.dp) // Add padding to align it nicely
+            )
         }
     }
 }
