@@ -5,6 +5,7 @@ package com.example.timelytrack.ui.history
 //import android.graphics.Color
 
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -28,15 +29,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowRightAlt
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.State
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import com.example.timelytrack.model.LogEntry
 
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -61,6 +67,7 @@ import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.core.common.Fill
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -72,6 +79,7 @@ import kotlin.math.roundToInt
 fun HistoryScreenPreview() {
     HistoryScreen()
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen() {
     // Variables
@@ -104,10 +112,12 @@ fun HistoryScreen() {
     }.timeInMillis
 
 
-    var selectedDateRange by remember {
-        mutableStateOf<Pair<Long?, Long?>>(
-            startOfRange to endOfToday // Default: Last 30 days, inclusive of today
-        )
+
+    var lastKnownDateRange by rememberSaveable {
+        mutableStateOf<Pair<Long?, Long?>>(startOfRange to endOfToday) // Default to 30-day range
+    }
+    var selectedDateRange by rememberSaveable {
+        mutableStateOf<Pair<Long?, Long?>>(lastKnownDateRange) // Initially, the selected range matches the last known range
     }
 //    var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(logEntries.value.map { it.startTimestamp }.sorted().first() to logEntries.value.map { it.startTimestamp }.sorted().last()) }
     var showSelectedDateRangeModal by remember { mutableStateOf(false) }
@@ -115,8 +125,10 @@ fun HistoryScreen() {
 
     // Future Visbility modifiers
         // show Empty days?
-    var showEmptyDays by remember { mutableStateOf(false) }
-    var showFullDataRange by remember { mutableStateOf(false) }
+    var showEmptyDaysChecked by rememberSaveable { mutableStateOf(false) }
+// Future Visibility modifiers
+    var showFullDataRangeChecked by rememberSaveable { mutableStateOf(false) }
+
         // show All data?
 
     // For Aggregation Filter
@@ -151,15 +163,29 @@ fun HistoryScreen() {
 
                 if (showDataVisibilityAdjustmentModal) {
                     DataVisibilityAdjustmentModal(
-                        onDismiss = { showDataVisibilityAdjustmentModal = false },
-                        showEmptyDays = showEmptyDays,
-                        onShowEmptyDaysChecked = { isChecked ->
-                            showEmptyDays = isChecked // Update the state for "Show Empty Days"
+                        onDismiss = {
+                            showDataVisibilityAdjustmentModal = false // Simply close the modal
                         },
-                        showFullDataRange = showFullDataRange,
-                        onShowFullDataRangeChecked = { isChecked ->
-                            showFullDataRange = isChecked // Update the state for "Show Full Data Range"
-                        }
+                        onConfirm = { emptyDaysChecked, fullDataRangeChecked ->
+                            // Update the states only on Confirm
+                            showEmptyDaysChecked = emptyDaysChecked
+                            showFullDataRangeChecked = fullDataRangeChecked
+                            showDataVisibilityAdjustmentModal = false // Close the modal
+
+                            if (fullDataRangeChecked) {
+                                // Update date range when "Show All Data" is checked
+                                lastKnownDateRange = selectedDateRange // Save the last known date range before switching
+                                selectedDateRange = Pair(
+                                    logEntries.value.map { it.startTimestamp }.sorted().firstOrNull(),
+                                    endOfToday
+                                )
+                            } else {
+                                // Revert to the last known range if unchecked
+                                selectedDateRange = lastKnownDateRange
+                            }
+                        },
+                        initialShowEmptyDaysChecked = showEmptyDaysChecked,
+                        initialShowFullDataRangeChecked = showFullDataRangeChecked
                     )
                 }
             }
@@ -167,7 +193,7 @@ fun HistoryScreen() {
             // Box for Aggregation Chart
             item {
                 Box() {
-                    AggregationChart(singleChoiceSelectedIndex, logEntries = logEntries, selectedDateRange = selectedDateRange)
+                    AggregationChart(singleChoiceSelectedIndex, logEntries = logEntries, selectedDateRange = selectedDateRange, showEmptyDaysChecked = showEmptyDaysChecked)
                 }
             }
             item{Spacer(modifier = Modifier.height(20.dp))
@@ -190,25 +216,28 @@ fun HistoryScreen() {
 @Composable
 fun DataVisibilityAdjustmentModal(
     onDismiss: () -> Unit,
-    showEmptyDays: Boolean,
-    onShowEmptyDaysChecked: (Boolean) -> Unit,
-    showFullDataRange: Boolean,
-    onShowFullDataRangeChecked: (Boolean) -> Unit
+    onConfirm: (Boolean, Boolean) -> Unit, // Callback for Confirm action
+    initialShowEmptyDaysChecked: Boolean,
+    initialShowFullDataRangeChecked: Boolean,
 ) {
+    // Local state to manage checkbox values temporarily
+    var showEmptyDaysChecked by remember { mutableStateOf(initialShowEmptyDaysChecked) }
+    var showFullDataRangeChecked by remember { mutableStateOf(initialShowFullDataRangeChecked) }
 
-    Dialog(onDismiss) {
+    Dialog(onDismissRequest = { onDismiss() }) {
         // Draw a rectangle shape with rounded corners inside the dialog
         Card(
             modifier = Modifier
                 .padding(24.dp)
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .defaultMinSize(minWidth = 280.dp) // Minimum width of 280dp
+                .defaultMinSize(minWidth = 280.dp)
                 .then(Modifier.widthIn(min = 280.dp, max = 560.dp)), // Width range: 280dp to 560dp
             shape = RoundedCornerShape(28.dp),
         ) {
             Column(
-                modifier = Modifier.padding(24.dp) // Top/Left/Right/Bottom padding of 24dp
+                modifier = Modifier
+                    .padding(24.dp)
                     .wrapContentHeight()
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -230,9 +259,9 @@ fun DataVisibilityAdjustmentModal(
                         verticalAlignment = Alignment.CenterVertically // Align content vertically
                     ) {
                         Checkbox(
-                            checked = showEmptyDays,
+                            checked = showEmptyDaysChecked,
                             onCheckedChange = { isChecked ->
-                                onShowEmptyDaysChecked(isChecked)
+                                showEmptyDaysChecked = isChecked
                             }
                         )
                         Text(
@@ -246,9 +275,9 @@ fun DataVisibilityAdjustmentModal(
                         verticalAlignment = Alignment.CenterVertically // Align content vertically
                     ) {
                         Checkbox(
-                            checked = showFullDataRange,
+                            checked = showFullDataRangeChecked,
                             onCheckedChange = { isChecked ->
-                                onShowFullDataRangeChecked(isChecked)
+                                showFullDataRangeChecked = isChecked
                             }
                         )
                         Text(
@@ -264,13 +293,15 @@ fun DataVisibilityAdjustmentModal(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(
-                        onClick = { onDismiss() },
+                        onClick = { onDismiss() }, // Dismiss without saving changes
                         modifier = Modifier.padding(8.dp),
                     ) {
                         Text("Dismiss")
                     }
                     TextButton(
-                        onClick = { onDismiss() },
+                        onClick = {
+                            onConfirm(showEmptyDaysChecked, showFullDataRangeChecked) // Save changes on confirm
+                        },
                         modifier = Modifier.padding(8.dp),
                     ) {
                         Text("Confirm")
@@ -365,6 +396,7 @@ private fun DateRangeSelectorComposable(
 }
 
 @Composable
+@ExperimentalMaterial3Api
 fun DateRangePickerModal(
     initialDateRange: Pair<Long?, Long?>,
     onDateRangeSelected: (Pair<Long?, Long?>) -> Unit,
@@ -374,65 +406,122 @@ fun DateRangePickerModal(
         initialSelectedStartDateMillis = initialDateRange.first,
         initialSelectedEndDateMillis = initialDateRange.second
     )
-
-    Dialog(onDismissRequest = onDismiss) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Select Date Range") },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        TextButton(
-                            onClick = {
-                                onDateRangeSelected(
-                                    Pair(
-                                        dateRangePickerState.selectedStartDateMillis?.plus(24L * 60 * 60 * 1000),
-                                        dateRangePickerState.selectedEndDateMillis?.plus(24L * 60 * 60 * 1000)
-                                    )
-                                )
-                                onDismiss()
-                            }
-                        ) {
-                            Text("Apply")
-                        }
-                    }
-                )
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                DateRangePicker(
-                    state = dateRangePickerState,
-                    title = {
-                        Text(
-                            text = "Select date range",
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    },
-                    showModeToggle = false,
+    Dialog(
+        onDismissRequest = { onDismiss() }, // Dismiss when tapping outside or pressing back
+        properties = DialogProperties(usePlatformDefaultWidth = false) // Full screen dialog
+    )  {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant) // Full background for the dialog
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Top bar with Cancel and Save buttons
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { onDismiss() }) {
+                        Icon(
+                            imageVector = Icons.Default.Close, // Material Design close icon
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    // Save button
+                    TextButton(
+                        onClick = {
+                            onDateRangeSelected(
+                                Pair(
+                                        dateRangePickerState.selectedStartDateMillis?.plus(24L * 60 * 60 * 1000),
+                                        dateRangePickerState.selectedEndDateMillis?.plus(24L * 60 * 60 * 1000)
+                                )
+                            )
+                        },
+                        enabled = dateRangePickerState.selectedEndDateMillis != null
+                    ) {
+                        Text("Save")
+                    }
+                }
+                DateRangePicker(
+                    state = dateRangePickerState,
+                    modifier = Modifier
                         .weight(1f)
+                        .fillMaxWidth()
                 )
             }
+
         }
     }
+//
+//    Dialog(onDismissRequest = onDismiss
+//    ) {
+//        Box(
+//            modifier = Modifier
+//                .fillMaxSize() // Ensure the dialog content uses full available space
+//                .background(MaterialTheme.colorScheme.background) // Set background color to match the theme
+//        ) {
+//            Scaffold(
+//            topBar = {
+//                TopAppBar(
+//                    title = { Text("Select Date Range") },
+//                    navigationIcon = {
+//                        IconButton(onClick = onDismiss) {
+//                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+//                        }
+//                    },
+//                    actions = {
+//                        TextButton(
+//                            onClick = {
+//                                onDateRangeSelected(
+//                                    Pair(
+//                                        dateRangePickerState.selectedStartDateMillis?.plus(24L * 60 * 60 * 1000),
+//                                        dateRangePickerState.selectedEndDateMillis?.plus(24L * 60 * 60 * 1000)
+//                                    )
+//                                )
+//                                onDismiss()
+//                            }
+//                        ) {
+//                            Text("Apply")
+//                        }
+//                    }
+//                )
+//            }
+//        ) { paddingValues ->
+//            Column(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .padding(paddingValues)
+//            ) {
+//                DateRangePicker(
+//                    state = dateRangePickerState,
+//                    title = {
+//                        Text(
+//                            text = "Select date range",
+//                            modifier = Modifier.padding(16.dp)
+//                        )
+//                    },
+//                    showModeToggle = false,
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .weight(1f)
+//                )
+//            }
+//        }
+//    }}
+
 }
 
 @Composable
-fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>, selectedDateRange: Pair<Long?, Long?>) {
+fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>, selectedDateRange: Pair<Long?, Long?>, showEmptyDaysChecked: Boolean) {
 
     var (logsDateGroups, logsSizeSeries) = logEntryAggregator(
         singleChoiceSelectedIndex,
         logEntries,
-        selectedDateRange
+        selectedDateRange, showEmptyDaysChecked
     ) // x, y
 
 
@@ -682,7 +771,8 @@ fun AggregationChartAxesConfigurator(logsDateGroups: MutableList<String>, logsSi
 fun logEntryAggregator (
     singleChoiceSelectedIndex: Int,
     logEntries: State<List<LogEntry>>,
-    selectedDateRange: Pair<Long?, Long?>
+    selectedDateRange: Pair<Long?, Long?>,
+    showEmptyDaysChecked: Boolean
 ): Pair<MutableList<String>?, MutableList<Int>?> {
     // Switch case based on index 0,1,2,3 to determine different ways of aggegating logEntries
 
@@ -716,31 +806,49 @@ fun logEntryAggregator (
             // Daily breakdown: Format as <Month> <Day>
             val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
             val allDates = mutableListOf<String>()
+            val logsDateGroups = mutableListOf<String>()
+            val logsSizeSeries = mutableListOf<Int>()
 
             if (logEntries.value.isNotEmpty() && selectedDateRange.first != null && selectedDateRange.second != null) {
                 val startTimestamp = selectedDateRange.first!!
                 val endTimestamp = selectedDateRange.second!!
 
-                val startDate = Calendar.getInstance().apply { time = Date(startTimestamp) }
-                val endDate = Calendar.getInstance().apply { time = Date(endTimestamp) }
+                if (showEmptyDaysChecked) {
+                    // Show empty days (fill in with 0 for missing dates)
+                    val startDate = Calendar.getInstance().apply { time = Date(startTimestamp) }
+                    val endDate = Calendar.getInstance().apply { time = Date(endTimestamp) }
 
-                // Generate all dates within the selected date range
-                while (startDate <= endDate) {
-                    allDates.add(dateFormat.format(startDate.time))
-                    startDate.add(Calendar.DATE, 1) // Increment by 1 day
-                }
-
-                // Group the logs by date within the selected range
-                val groupedLogs = logEntries.value
-                    .filter { it.startTimestamp in selectedDateRange.first!!..selectedDateRange.second!! }
-                    .groupBy { logEntry ->
-                        dateFormat.format(Date(logEntry.startTimestamp))
+                    // Generate all dates within the selected date range
+                    while (!startDate.after(endDate)) {
+                        allDates.add(dateFormat.format(startDate.time))
+                        startDate.add(Calendar.DATE, 1) // Increment by 1 day
                     }
 
-                // Fill in the logsDateGroups and logsSizeSeries, accounting for missing dates
-                allDates.forEach { date ->
-                    logsDateGroups.add(date)
-                    logsSizeSeries.add(groupedLogs[date]?.size ?: 0) // Add 0 if no logs for the date
+                    // Group the logs by date within the selected range
+                    val groupedLogs = logEntries.value
+                        .filter { it.startTimestamp in startTimestamp..endTimestamp }
+                        .groupBy { logEntry ->
+                            dateFormat.format(Date(logEntry.startTimestamp))
+                        }
+
+                    // Fill in the logsDateGroups and logsSizeSeries, accounting for missing dates
+                    allDates.forEach { date ->
+                        logsDateGroups.add(date)
+                        logsSizeSeries.add(groupedLogs[date]?.size ?: 0) // Add 0 if no logs for the date
+                    }
+                } else {
+                    // Do not show empty days (only include days with data)
+                    val groupedLogs = logEntries.value
+                        .filter { it.startTimestamp in startTimestamp..endTimestamp }
+                        .groupBy { logEntry ->
+                            dateFormat.format(Date(logEntry.startTimestamp))
+                        }
+
+                    // Add only dates with data to the groups
+                    groupedLogs.forEach { (date, logs) ->
+                        logsDateGroups.add(date)
+                        logsSizeSeries.add(logs.size)
+                    }
                 }
             }
 
