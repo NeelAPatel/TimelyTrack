@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import com.example.timelytrack.data.LogEntryRepository
 import kotlinx.coroutines.flow.*
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 
 class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
@@ -41,6 +43,28 @@ class LogViewModel(private val repository: LogEntryRepository) : ViewModel() {
             startTimestamp = System.currentTimeMillis(),
             endTimestamp = System.currentTimeMillis()
         )
+        viewModelScope.launch {
+            repository.insertLogEntry(newLogEntry)
+        }
+    }
+
+    fun addLogEntryWithManualDate(categoryId: String, date: String, time: String) {
+        // Define the expected format for date and time
+        val dateTimeFormat = SimpleDateFormat("MMM dd yyyy HH:mm", Locale.getDefault())
+
+        // Combine the input date and time into a single string
+        val dateTimeString = "$date $time"
+
+        // Parse the string into a timestamp
+        val timestamp = dateTimeFormat.parse(dateTimeString)?.time ?: System.currentTimeMillis()
+
+        // Create a LogEntry
+        val newLogEntry = LogEntry(
+            categoryId = categoryId,
+            startTimestamp = timestamp,
+            endTimestamp = timestamp + 60 * 60 * 1000 // Example: 1-hour duration
+        )
+
         viewModelScope.launch {
             repository.insertLogEntry(newLogEntry)
         }

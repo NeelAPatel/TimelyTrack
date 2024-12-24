@@ -21,6 +21,7 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -88,6 +89,12 @@ fun HomeScreen() {
         snapshotFlow { logColumnListState.layoutInfo.visibleItemsInfo to logColumnListState.firstVisibleItemIndex }
             .collect { (visibleItemsInfo)->
                 // == fab control ==
+
+//                if (logEntries.value.isEmpty()) {
+//                    isFabVisible = true
+//                    return@collect
+//                }
+
                 val lastIndex = logEntries.value.size - 1
                 val isLastItemVisible = visibleItemsInfo.any { it.index == lastIndex }
 
@@ -106,6 +113,27 @@ fun HomeScreen() {
     Scaffold(
         floatingActionButtonPosition = FabPosition.End,
         floatingActionButton = {
+//                SmallFloatingActionButton(
+//                    onClick = {
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 21 2022", "10:00")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 21 2022", "15:00")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "13:45")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 22 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "13:45")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "13:45")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 23 2022", "09:30")
+//                        viewModel.addLogEntryWithManualDate("1", "Nov 24 2022", "13:45")
+//
+//                    },
+//                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+//                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+//                ) {
+//
+//                }
+
                 FABComponent(viewModel = viewModel,
                     isFabVisible = isFabVisible,
                     onFabTapped = {
@@ -335,6 +363,5 @@ fun <T> SwipeToDeleteContainer(
 // --- Added function to group logs by date ---
 fun groupLogsByDate(logEntries: State<List<LogEntry>>): Map<String, List<LogEntry>> {
     val dateFormat = SimpleDateFormat("EEEE MMM dd, yyyy", Locale.getDefault())
-    return logEntries.value.groupBy { logEntry -> dateFormat.format(Date(logEntry.startTimestamp))
-    }
+    return logEntries.value.groupBy { logEntry -> dateFormat.format(Date(logEntry.startTimestamp)) }
 }

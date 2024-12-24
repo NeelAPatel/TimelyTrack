@@ -52,6 +52,7 @@ android {
 
 dependencies {
 
+    implementation(libs.androidx.ui.viewbinding)
     //    implementation(libs.androidx.ui.desktop)
     androidTestImplementation(libs.androidx.compose.ui.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core.v351)
@@ -111,4 +112,14 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     testImplementation(libs.junit)
 
+
+    //Vico Graph Dependencies
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m2)
+    implementation(libs.vico.compose.m3)
+    implementation(libs.vico.core)
+    implementation(libs.vico.views)
+
+
+    implementation (libs.ycharts)
 }

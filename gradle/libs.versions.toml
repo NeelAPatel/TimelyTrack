@@ -35,10 +35,13 @@ navigationComposeVersion = "2.8.1"
 navigationRuntimeKtx = "2.8.1"
 roomCompiler = "2.6.1"
 runtimeLivedata = "1.7.2"
+vico = "2.0.0-beta.3"
 uiDesktop = "1.7.0"
 uiTestJunit4 = "1.7.2"
 uiTestManifest = "1.7.2"
 uiTooling = "1.7.2"
+uiViewbinding = "1.7.5"
+ycharts = "2.1.0"
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
@@ -97,6 +100,28 @@ ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = 
 ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "uiTestManifest" }
 ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "uiTooling" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+
+#Vico Graph dependancies
+# For Jetpack Compose.
+vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
+
+# For Material 2 theming in Jetpack Compose.
+vico-compose-m2 = { group = "com.patrykandpatrick.vico", name = "compose-m2", version.ref = "vico" }
+
+# For Material 3 theming in Jetpack Compose.
+vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
+
+# Houses the core logic. This is included in all other modules, so add it explicitly only
+# in the unlikely event that you don’t need anything else.
+vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
+
+# For the view system.
+vico-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico" }
+androidx-ui-viewbinding = { group = "androidx.compose.ui", name = "ui-viewbinding", version.ref = "uiViewbinding" }
+
+# YCHarts Plugin
+ycharts = { module = "co.yml:ycharts", version.ref = "ycharts" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

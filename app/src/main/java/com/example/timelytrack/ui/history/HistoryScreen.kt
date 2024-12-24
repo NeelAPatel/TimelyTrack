@@ -2,518 +2,848 @@
 
 package com.example.timelytrack.ui.history
 
-//import android.graphics.Color
-
-import androidx.compose.animation.animateColorAsState
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.RectangleShape
 
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.*
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.timelytrack.viewmodel.LogViewModel
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowRightAlt
+
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.runtime.State
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.example.timelytrack.model.LogEntry
+
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
+import com.patrykandpatrick.vico.core.common.Fill
+import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
 
 @Preview(showBackground = true)
 @Composable
 fun HistoryScreenPreview() {
     HistoryScreen()
 }
-
-
-
-
-@Composable
-fun HistoryScreen() {
-    Text(text = "History Screen")
-
-    DemoBottomSheet()
-
-    DemoSwipeToDismissBox()
-
-    Scaffold(
-        content={ innerPadding ->
-            LazyColumn{
-                item { DemoSwipeToDismissBox() }
-                item { DemoBottomSheet() }
-                item { DemoTimePickerWithError()}
-
-            }
-        }
-    )
-
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DemoTimePickerWithError() {
-    var timeText by remember { mutableStateOf("12:00 PM") } // Default time
-    var isError by remember { mutableStateOf(false) } // Error state
-    var errorMessage by remember { mutableStateOf("") } // Error message
-    var showTimePicker by remember { mutableStateOf(false) } // Toggles the time picker dialog
-    val timePickerState = rememberTimePickerState(initialHour = 12, initialMinute = 0)
+fun HistoryScreen() {
+    // Variables
 
-    // Watch for changes in the TimePicker state and validate immediately
-    LaunchedEffect(timePickerState.hour, timePickerState.minute) {
-        validateTime(timePickerState.hour, timePickerState.minute) { valid, error ->
-            isError = !valid
-            errorMessage = error
-        }
+    // Database
+    val viewModel: LogViewModel = viewModel(factory = LogViewModel.Factory)
+    val logEntries = viewModel.allLogEntries.collectAsState()
+
+    //get user data
+
+    // For date range selector
+    val startOfToday: Long = Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis()
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    val endOfToday: Long = Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis()
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }.timeInMillis
+
+    val startOfRange: Long = Calendar.getInstance().apply {
+        timeInMillis = startOfToday
+        add(Calendar.DAY_OF_YEAR, -30) // Go back 30 days
+    }.timeInMillis
+
+
+
+    var lastKnownDateRange by rememberSaveable {
+        mutableStateOf<Pair<Long?, Long?>>(startOfRange to endOfToday) // Default to 30-day range
     }
+    var selectedDateRange by rememberSaveable {
+        mutableStateOf<Pair<Long?, Long?>>(lastKnownDateRange) // Initially, the selected range matches the last known range
+    }
+//    var selectedDateRange by remember { mutableStateOf<Pair<Long?, Long?>>(logEntries.value.map { it.startTimestamp }.sorted().first() to logEntries.value.map { it.startTimestamp }.sorted().last()) }
+    var showSelectedDateRangeModal by remember { mutableStateOf(false) }
+    var showDataVisibilityAdjustmentModal by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        // OutlinedTextField with error handling
-        OutlinedTextField(
-            value = timeText,
-            onValueChange = {},
-            label = { Text("Time") },
-            isError = isError,
-            trailingIcon = {
-                Icon(
-                    imageVector = Icons.Filled.Schedule,
-                    contentDescription = "Pick Time",
-                    modifier = Modifier.clickable {
-                        showTimePicker = true
+    // Future Visibility modifiers
+        // show Empty days?
+    var showEmptyDaysChecked by rememberSaveable { mutableStateOf(false) }
+// Future Visibility modifiers
+    var showFullDataRangeChecked by rememberSaveable { mutableStateOf(false) }
+
+        // show All data?
+
+    // For Aggregation Filter
+    var singleChoiceSelectedIndex by rememberSaveable { mutableStateOf(1) } // default is daily
+    val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
+
+    // === UI ====
+    Scaffold() { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.padding(innerPadding).padding(12.dp)
+        ) {
+
+            // Row for Date Range Selector + Filter
+            item{
+                DateRangeSelectorComposable(
+                    selectedDateRange = selectedDateRange,
+                    onDateRangeClick = {showSelectedDateRangeModal = true},
+                    onDataVisibilityClick = {showDataVisibilityAdjustmentModal = true})
+                AggregationFilterSelectorComposable(
+                    singleChoiceSelectorOptions = singleChoiceSelectorOptions,
+                    singleChoiceSelectedIndex = singleChoiceSelectedIndex,
+                    onOptionSelected = { selectedIndex ->
+                        singleChoiceSelectedIndex = selectedIndex // Update the state
                     }
                 )
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // Error Message
-        if (isError) {
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 16.dp)
-            )
-        }
-
-        // Material3 TimePicker in a Dialog
-        if (showTimePicker) {
-            AlertDialog(
-                onDismissRequest = { showTimePicker = false },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val formattedTime = String.format(
-                                "%02d:%02d %s",
-                                if (timePickerState.hour % 12 == 0) 12 else timePickerState.hour % 12,
-                                timePickerState.minute,
-                                if (timePickerState.hour < 12) "AM" else "PM"
-                            )
-                            timeText = formattedTime
-                            showTimePicker = false
-                        }
-                    ) {
-                        Text("OK")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showTimePicker = false }) {
-                        Text("Cancel")
-                    }
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        TimePicker(
-                            state = timePickerState,
-                            modifier = Modifier.padding(8.dp)
-                        )
-
-                        if (isError) {
-                            // Highlight the error message in the TimePicker UI itself
-                            Text(
-                                text = errorMessage,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                    }
-                }
-            )
-        }
-    }
-}
-
-// Validation function for TimePicker's hour and minute fields
-fun validateTime(hour: Int, minute: Int, onResult: (Boolean, String) -> Unit) {
-    if (hour == 11 && minute == 0) {
-        onResult(false, "11:00 AM/PM is not allowed")
-    } else {
-        onResult(true, "")
-    }
-}
-
-
-// Validation function for manual text input
-fun validateTimeText(time: String, onResult: (Boolean, String) -> Unit) {
-    if (time.isBlank()) {
-        onResult(false, "Time cannot be empty")
-    } else if (!Regex("\\d{1,2}:\\d{2} [AP]M").matches(time)) {
-        onResult(false, "Invalid time format (expected hh:mm AM/PM)")
-    } else if (time.startsWith("11:00")) {
-        onResult(false, "11:00 AM/PM is not allowed")
-    } else {
-        onResult(true, "")
-    }
-}
-
-
-@Composable
-fun DemoSwipeToDismissBox() {
-    val dismissState = rememberSwipeToDismissBoxState()
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            val color by
-            animateColorAsState(
-                when (dismissState.targetValue) {
-                    SwipeToDismissBoxValue.Settled -> Color.LightGray
-                    SwipeToDismissBoxValue.StartToEnd -> Color.Green
-                    SwipeToDismissBoxValue.EndToStart -> Color.Red
-                }
-            )
-            Box(Modifier.fillMaxSize().background(color))
-        }
-    ) {
-        OutlinedCard(shape = RectangleShape) {
-            ListItem(
-                headlineContent = { Text("Cupcake") },
-                supportingContent = { Text("Swipe me left or right!") }
-            )
-        }
-    }
-}
-
-
-@Composable
-fun DemoBottomSheet() {
-    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
-    var skipPartiallyExpanded by rememberSaveable { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val bottomSheetState =
-        rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
-
-
-// App content
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Row(
-            Modifier.toggleable(
-                value = skipPartiallyExpanded,
-                role = Role.Checkbox,
-                onValueChange = { checked -> skipPartiallyExpanded = checked }
-            )
-        ) {
-            Checkbox(checked = skipPartiallyExpanded, onCheckedChange = null)
-            Spacer(Modifier.width(16.dp))
-            Text("Skip partially expanded State")
-        }
-        Button(
-            onClick = { openBottomSheet = !openBottomSheet },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Text(text = "Show Bottom Sheet")
-        }
-    }
-
-// Sheet content
-    if (openBottomSheet) {
-
-        ModalBottomSheet(
-            onDismissRequest = { openBottomSheet = false },
-            sheetState = bottomSheetState,
-        ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Button(
-                    // Note: If you provide logic outside of onDismissRequest to remove the sheet,
-                    // you must additionally handle intended state cleanup, if any.
-                    onClick = {
-                        scope
-                            .launch { bottomSheetState.hide() }
-                            .invokeOnCompletion {
-                                if (!bottomSheetState.isVisible) {
-                                    openBottomSheet = false
-                                }
-                            }
-                    }
-                ) {
-                    Text("Hide Bottom Sheet")
-                }
-            }
-            var text by remember { mutableStateOf("") }
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier.padding(horizontal = 16.dp),
-                label = { Text("Text field") }
-            )
-            LazyColumn {
-                items(25) {
-                    ListItem(
-                        headlineContent = { Text("Item $it") },
-                        leadingContent = {
-                            Icon(
-                                Icons.Default.Favorite,
-                                contentDescription = "Localized description"
-                            )
+                if (showSelectedDateRangeModal) {
+                    DateRangePickerModal(
+                        initialDateRange = selectedDateRange, // Pass current range to modal
+                        onDateRangeSelected = {
+                            selectedDateRange = it // Update the selected date range
+                            showSelectedDateRangeModal = false // Close the modal
                         },
-                        colors =
-                        ListItemDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                        ),
+                        onDismiss = { showSelectedDateRangeModal = false }
+                    )
+
+                }
+
+                if (showDataVisibilityAdjustmentModal) {
+                    DataVisibilityAdjustmentModal(
+                        onDismiss = {
+                            showDataVisibilityAdjustmentModal = false // Simply close the modal
+                        },
+                        onConfirm = { emptyDaysChecked, fullDataRangeChecked ->
+                            // Update the states only on Confirm
+                            showEmptyDaysChecked = emptyDaysChecked
+                            showFullDataRangeChecked = fullDataRangeChecked
+                            showDataVisibilityAdjustmentModal = false // Close the modal
+
+                            if (fullDataRangeChecked) {
+                                // Update date range when "Show All Data" is checked
+                                lastKnownDateRange = selectedDateRange // Save the last known date range before switching
+                                selectedDateRange = Pair(
+                                    logEntries.value.map { it.startTimestamp }.sorted().firstOrNull(),
+                                    endOfToday
+                                )
+                            } else {
+                                // Revert to the last known range if unchecked
+                                selectedDateRange = lastKnownDateRange
+                            }
+                        },
+                        initialShowEmptyDaysChecked = showEmptyDaysChecked,
+                        initialShowFullDataRangeChecked = showFullDataRangeChecked
                     )
                 }
             }
+
+            // Box for Aggregation Chart
+            item {
+                Box() {
+                    AggregationChart(singleChoiceSelectedIndex, logEntries = logEntries, selectedDateRange = selectedDateRange, showEmptyDaysChecked = showEmptyDaysChecked)
+                }
+            }
+            item{Spacer(modifier = Modifier.height(20.dp))
+                androidx.compose.material.Divider()
+            }
+
+            item {
+                Text("Hourly Aggregate")
+                Box(
+                ) {
+                    HourlyDistributionChart(singleChoiceSelectedIndex, logEntries = logEntries)
+                }
+            }
+
+        }
+
+    }
+}
+
+@Composable
+fun DataVisibilityAdjustmentModal(
+    onDismiss: () -> Unit,
+    onConfirm: (Boolean, Boolean) -> Unit, // Callback for Confirm action
+    initialShowEmptyDaysChecked: Boolean,
+    initialShowFullDataRangeChecked: Boolean,
+) {
+    // Local state to manage checkbox values temporarily
+    var showEmptyDaysChecked by remember { mutableStateOf(initialShowEmptyDaysChecked) }
+    var showFullDataRangeChecked by remember { mutableStateOf(initialShowFullDataRangeChecked) }
+
+    Dialog(onDismissRequest = { onDismiss() }) {
+        // Draw a rectangle shape with rounded corners inside the dialog
+        Card(
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .defaultMinSize(minWidth = 280.dp)
+                .then(Modifier.widthIn(min = 280.dp, max = 560.dp)), // Width range: 280dp to 560dp
+            shape = RoundedCornerShape(28.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Adjust Data Visibility",
+                    style = MaterialTheme.typography.titleLarge, // Material 3 title style
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp), // Padding between title and body
+                    textAlign = TextAlign.Start
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically // Align content vertically
+                    ) {
+                        Checkbox(
+                            checked = showEmptyDaysChecked,
+                            onCheckedChange = { isChecked ->
+                                showEmptyDaysChecked = isChecked
+                            }
+                        )
+                        Text(
+                            text = "Show Empty Days",
+                            modifier = Modifier.padding(start = 8.dp) // Padding between checkbox and text
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically // Align content vertically
+                    ) {
+                        Checkbox(
+                            checked = showFullDataRangeChecked,
+                            onCheckedChange = { isChecked ->
+                                showFullDataRangeChecked = isChecked
+                            }
+                        )
+                        Text(
+                            text = "Show All Data",
+                            modifier = Modifier.padding(start = 8.dp) // Padding between checkbox and text
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(
+                        onClick = { onDismiss() }, // Dismiss without saving changes
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Dismiss")
+                    }
+                    TextButton(
+                        onClick = {
+                            onConfirm(showEmptyDaysChecked, showFullDataRangeChecked) // Save changes on confirm
+                        },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Confirm")
+                    }
+                }
+            }
         }
     }
 }
 
-
-@Preview
 @Composable
-fun ColorSchemePreview() {
-    MaterialTheme {
-        Column {
-            ColorDisplay(color = MaterialTheme.colorScheme.tertiary, name = "primary")
-            ColorDisplay(color = MaterialTheme.colorScheme.onPrimary, name = "onPrimary")
-            ColorDisplay(color = MaterialTheme.colorScheme.primaryContainer, name = "primaryContainer")
-            // ... display other colors similarly
-        }
-    }
-}
-
-@Composable
-fun ColorDisplay(color: Color, name: String) {
-    Box(
-        modifier = Modifier
-            .size(100.dp)
-            .background(color),
-        contentAlignment = Alignment.Center
+fun AggregationFilterSelectorComposable(
+    singleChoiceSelectorOptions: List<String>,
+    singleChoiceSelectedIndex: Int,
+    onOptionSelected: (Int) -> Unit // Callback to update the selected index
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(), // Center aligns content
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = name, color = Color.White)
+        Icon(
+            Icons.Filled.FilterList,
+            contentDescription = "Filter",
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+        )
+
+        SingleChoiceSegmentedButtonRow(
+            Modifier.fillMaxWidth(),
+        ) {
+            singleChoiceSelectorOptions.forEachIndexed { index, label ->
+                SegmentedButton(
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = singleChoiceSelectorOptions.size
+                    ),
+                    onClick = { onOptionSelected(index) }, // Update state in the parent
+                    selected = index == singleChoiceSelectedIndex
+                ) {
+                    Text(label)
+                }
+            }
+        }
     }
 }
 
-//
-//
-///** The directions in which a [SwipeToDismiss] can be dismissed. */
-//enum class DismissDirection {
-//    /** Can be dismissed by swiping in the reading direction. */
-//    StartToEnd,
-//
-//    /** Can be dismissed by swiping in the reverse of the reading direction. */
-//    EndToStart
-//}
-//
-///** Possible values of [DismissState]. */
-//enum class DismissValue {
-//    /** Indicates the component has not been dismissed yet. */
-//    Default,
-//
-//    /** Indicates the component has been dismissed in the reading direction. */
-//    DismissedToEnd,
-//
-//    /** Indicates the component has been dismissed in the reverse of the reading direction. */
-//    DismissedToStart
-//}
-//
-///**
-// * State of the [SwipeToDismiss] composable.
-// *
-// * @param initialValue The initial value of the state.
-// * @param confirmStateChange Optional callback invoked to confirm or veto a pending state change.
-// */
-//@ExperimentalMaterialApi
-//class DismissState(
-//    initialValue: DismissValue,
-//    confirmStateChange: (DismissValue) -> Boolean = { true }
-//) : SwipeableState<DismissValue>(initialValue, confirmStateChange = confirmStateChange) {
-//    /**
-//     * The direction (if any) in which the composable has been or is being dismissed.
-//     *
-//     * If the composable is settled at the default state, then this will be null. Use this to change
-//     * the background of the [SwipeToDismiss] if you want different actions on each side.
-//     */
-//    val dismissDirection: DismissDirection?
-//        get() = if (offset.value == 0f) null else if (offset.value > 0f) StartToEnd else EndToStart
-//
-//    /**
-//     * Whether the component has been dismissed in the given [direction].
-//     *
-//     * @param direction The dismiss direction.
-//     */
-//    fun isDismissed(direction: DismissDirection): Boolean {
-//        return currentValue == if (direction == StartToEnd) DismissedToEnd else DismissedToStart
-//    }
-//
-//    /**
-//     * Reset the component to the default position with animation and suspend until it if fully
-//     * reset or animation has been cancelled. This method will throw [CancellationException] if the
-//     * animation is interrupted
-//     *
-//     * @return the reason the reset animation ended
-//     */
-//    suspend fun reset() = animateTo(targetValue = Default)
-//
-//    /**
-//     * Dismiss the component in the given [direction], with an animation and suspend. This method
-//     * will throw [CancellationException] if the animation is interrupted
-//     *
-//     * @param direction The dismiss direction.
-//     */
-//    suspend fun dismiss(direction: DismissDirection) {
-//        val targetValue = if (direction == StartToEnd) DismissedToEnd else DismissedToStart
-//        animateTo(targetValue = targetValue)
-//    }
-//
-//    companion object {
-//        /** The default [Saver] implementation for [DismissState]. */
-//        fun Saver(confirmStateChange: (DismissValue) -> Boolean) =
-//            Saver<DismissState, DismissValue>(
-//                save = { it.currentValue },
-//                restore = { DismissState(it, confirmStateChange) }
-//            )
-//    }
-//}
-//
-///**
-// * Create and [remember] a [DismissState].
-// *
-// * @param initialValue The initial value of the state.
-// * @param confirmStateChange Optional callback invoked to confirm or veto a pending state change.
-// */
-//@Composable
-//@ExperimentalMaterialApi
-//fun rememberDismissState(
-//    initialValue: DismissValue = Default,
-//    confirmStateChange: (DismissValue) -> Boolean = { true }
-//): DismissState {
-//    return rememberSaveable(saver = DismissState.Saver(confirmStateChange)) {
-//        DismissState(initialValue, confirmStateChange)
-//    }
-//}
-//
-///**
-// * A composable that can be dismissed by swiping left or right.
-// *
-// * @sample androidx.compose.material.samples.SwipeToDismissListItems
-// * @param state The state of this component.
-// * @param modifier Optional [Modifier] for this component.
-// * @param directions The set of directions in which the component can be dismissed.
-// * @param dismissThresholds The thresholds the item needs to be swiped in order to be dismissed.
-// * @param background A composable that is stacked behind the content and is exposed when the content
-// *   is swiped. You can/should use the [state] to have different backgrounds on each side.
-// * @param dismissContent The content that can be dismissed.
-// */
-//@Composable
-//@ExperimentalMaterialApi
-//@Suppress("ReferencesDeprecated")
-//fun SwipeToDismiss(
-//    state: DismissState,
-//    modifier: Modifier = Modifier,
-//    directions: Set<DismissDirection> = setOf(EndToStart, StartToEnd),
-//    dismissThresholds: (DismissDirection) -> ThresholdConfig = {
-//        FixedThreshold(DISMISS_THRESHOLD)
-//    },
-//    background: @Composable RowScope.() -> Unit,
-//    dismissContent: @Composable RowScope.() -> Unit
-//) =
-//    BoxWithConstraints(modifier) {
-//        val width = constraints.maxWidth.toFloat()
-//        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-//
-//        val anchors = mutableMapOf(0f to Default)
-//        if (StartToEnd in directions) anchors += width to DismissedToEnd
-//        if (EndToStart in directions) anchors += -width to DismissedToStart
-//
-//        val thresholds = { from: DismissValue, to: DismissValue ->
-//            dismissThresholds(getDismissDirection(from, to)!!)
-//        }
-//        val minFactor =
-//            if (EndToStart in directions) StandardResistanceFactor else StiffResistanceFactor
-//        val maxFactor =
-//            if (StartToEnd in directions) StandardResistanceFactor else StiffResistanceFactor
-//        Box(
-//            Modifier.swipeable(
-//                state = state,
-//                anchors = anchors,
-//                thresholds = thresholds,
-//                orientation = Orientation.Horizontal,
-//                enabled = state.currentValue == Default,
-//                reverseDirection = isRtl,
-//                resistance =
-//                ResistanceConfig(
-//                    basis = width,
-//                    factorAtMin = minFactor,
-//                    factorAtMax = maxFactor
-//                )
-//            )
-//        ) {
-//            Row(content = background, modifier = Modifier.matchParentSize())
-//            Row(
-//                content = dismissContent,
-//                modifier = Modifier.offset { IntOffset(state.offset.value.roundToInt(), 0) }
-//            )
-//        }
-//    }
-//
-//private fun getDismissDirection(from: DismissValue, to: DismissValue): androidx.compose.material.DismissDirection? {
-//    return when {
-//        // settled at the default state
-//        from == to && from == Default -> null
-//        // has been dismissed to the end
-//        from == to && from == DismissedToEnd -> StartToEnd
-//        // has been dismissed to the start
-//        from == to && from == DismissedToStart -> EndToStart
-//        // is currently being dismissed to the end
-//        from == Default && to == DismissedToEnd -> StartToEnd
-//        // is currently being dismissed to the start
-//        from == Default && to == DismissedToStart -> EndToStart
-//        // has been dismissed to the end but is now animated back to default
-//        from == DismissedToEnd && to == Default -> StartToEnd
-//        // has been dismissed to the start but is now animated back to default
-//        from == DismissedToStart && to == Default -> EndToStart
-//        else -> null
-//    }
-//}
-//
-//private val DISMISS_THRESHOLD = 56.dp
+@Composable
+private fun DateRangeSelectorComposable(
+    onDateRangeClick: () -> Unit,
+    selectedDateRange: Pair<Long?, Long?>,
+    onDataVisibilityClick: () -> Unit
+) {
+    Row(
+        //center aligns content
+        modifier = Modifier
+            .fillMaxWidth(),
+//        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.CalendarMonth,
+            contentDescription = "Range Calendar",
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+        )
+        OutlinedButton(
+            onClick = onDateRangeClick,
+//            modifier = Modifier.padding(8.dp),
+        ) {
+
+            Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(selectedDateRange.first!!)))
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowRightAlt,
+                contentDescription = "Right Arrow",
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+            )
+            Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(selectedDateRange.second!!)))
+        }
+
+        Spacer(modifier = Modifier.weight(1f)) // Pushes the next item to the right
+        IconButton(
+            onClick = onDataVisibilityClick
+        ) {
+            Icon(
+                Icons.Filled.Visibility,
+                contentDescription = "Data Visibility",
+                modifier = Modifier.padding(8.dp) // Add padding to align it nicely
+            )
+        }
+    }
+}
+
+@Composable
+@ExperimentalMaterial3Api
+fun DateRangePickerModal(
+    initialDateRange: Pair<Long?, Long?>,
+    onDateRangeSelected: (Pair<Long?, Long?>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val dateRangePickerState = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = initialDateRange.first,
+        initialSelectedEndDateMillis = initialDateRange.second
+    )
+    Dialog(
+        onDismissRequest = { onDismiss() }, // Dismiss when tapping outside or pressing back
+        properties = DialogProperties(usePlatformDefaultWidth = false) // Full screen dialog
+    )  {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant) // Full background for the dialog
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Top bar with Cancel and Save buttons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { onDismiss() }) {
+                        Icon(
+                            imageVector = Icons.Default.Close, // Material Design close icon
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    // Save button
+                    TextButton(
+                        onClick = {
+                            onDateRangeSelected(
+                                Pair(
+                                        dateRangePickerState.selectedStartDateMillis?.plus(24L * 60 * 60 * 1000),
+                                        dateRangePickerState.selectedEndDateMillis?.plus(24L * 60 * 60 * 1000)
+                                )
+                            )
+                        },
+                        enabled = dateRangePickerState.selectedEndDateMillis != null
+                    ) {
+                        Text("Save")
+                    }
+                }
+                DateRangePicker(
+                    state = dateRangePickerState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+            }
+
+        }
+    }
+
+}
+
+@Composable
+fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>, selectedDateRange: Pair<Long?, Long?>, showEmptyDaysChecked: Boolean) {
+
+    val (logsDateGroups, logsSizeSeries) = logEntryAggregator(
+        singleChoiceSelectedIndex,
+        logEntries,
+        selectedDateRange, showEmptyDaysChecked
+    ) // x, y
+
+
+    // Trigger Chart data production
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(logsSizeSeries) {
+        modelProducer.runTransaction {
+            columnSeries {
+                if (logsSizeSeries != null) { series(logsSizeSeries)}
+            }
+        }
+    }
+
+    if (logsDateGroups != null)
+    {
+
+        // Set up Scrolling/Zooming configuration; empty = default
+        val scrollState = rememberVicoScrollState(/* ... */)
+        val zoomState = rememberVicoZoomState(/* ... */)
+
+
+        val axisConfig = AggregationChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
+
+        val startAxisConfig = axisConfig.first
+        val endAxisConfig = axisConfig.second
+        val topAxisConfig = axisConfig.third.first
+        val bottomAxisConfig = axisConfig.third.second
+        // Set up Axis Configuration; null = no axes
+
+
+        CartesianChartHost(
+            rememberCartesianChart( //Chart Data Provider
+                rememberColumnCartesianLayer( // Chart UI
+                    ColumnCartesianLayer.ColumnProvider.series(
+                        rememberLineComponent(
+                            fill = Fill(Color(MaterialTheme.colorScheme.primary.toArgb()).toArgb()),
+                            thickness = 6.dp,
+                            shape = CorneredShape.rounded(allPercent = 40),
+                        )
+                    )
+                ),
+                startAxis = startAxisConfig,
+                endAxis = endAxisConfig,
+                topAxis = topAxisConfig,
+                bottomAxis = bottomAxisConfig,
+                marker = rememberMarker(DefaultCartesianMarker.LabelPosition.AbovePoint)
+            ),
+            modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier // for entire graph
+                .fillMaxWidth()
+                .height(300.dp)
+                .then(Modifier.graphicsLayer { rotationZ = 0f })
+        )
+    }
+    else{
+        Text("No data to display")
+    }
+}
+
+@Composable
+fun HourlyDistributionChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
+    val logsDateGroups = mutableListOf<String>() // Labels for the chart
+    val logsSizeSeries = mutableListOf<Int>() // Values for the chart
+
+    // Prepare a map with all 24 hours initialized to 0
+    val hourFormat = SimpleDateFormat("hh:00 a", Locale.getDefault())
+    val hourlyMap = (0..23).associate { hour ->
+        // Create a Date object for each hour of the day
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, hour)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        hourFormat.format(calendar.time) to 0
+    }.toMutableMap()
+
+    // Aggregate log entries into the hourly map
+    val calendar = Calendar.getInstance()
+    logEntries.value.forEach { logEntry ->
+        calendar.timeInMillis = logEntry.startTimestamp
+        val hourKey = hourFormat.format(calendar.time)
+        hourlyMap[hourKey] = hourlyMap.getOrDefault(hourKey, 0) + 1
+    }
+
+
+    // Populate the labels and series from the hourly map
+    hourlyMap.forEach { (hour, count) ->
+        logsDateGroups.add(hour)
+        logsSizeSeries.add(count)
+    }
+
+
+    // Trigger Chart data production
+    val modelProducer = remember { CartesianChartModelProducer() }
+    LaunchedEffect(logsSizeSeries) {
+        modelProducer.runTransaction {
+            columnSeries {
+                if (logsSizeSeries != null) {
+                    series(logsSizeSeries)
+                }
+            }
+        }
+    }
+
+    if (logsDateGroups != null) {
+
+        // Set up Scrolling/Zooming configuration; empty = default
+        val scrollState = rememberVicoScrollState(/* ... */)
+        val zoomState = rememberVicoZoomState(/* ... */)
+
+
+        var axisConfig =
+            AggregationChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
+
+        val startAxisConfig = axisConfig.first
+        val endAxisConfig = axisConfig.second
+        val topAxisConfig = axisConfig.third.first
+        val bottomAxisConfig = axisConfig.third.second
+        // Set up Axis Configuration; null = no axes
+
+
+        CartesianChartHost(
+            rememberCartesianChart( //Chart Data Provider
+                rememberColumnCartesianLayer( // Chart UI
+                    ColumnCartesianLayer.ColumnProvider.series(
+                        rememberLineComponent(
+                            fill = Fill(Color(MaterialTheme.colorScheme.primary.toArgb()).toArgb()),
+                            thickness = 6.dp,
+                            shape = CorneredShape.rounded(allPercent = 40),
+                        )
+                    )
+                ),
+                startAxis = startAxisConfig,
+                endAxis = endAxisConfig,
+                topAxis = topAxisConfig,
+                bottomAxis = HorizontalAxis.rememberBottom(
+                    label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+                    titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
+                    labelRotationDegrees = -90f,
+                    valueFormatter = CartesianValueFormatter { _, x, _ ->
+                        logsDateGroups.getOrNull(x.roundToInt()) ?: " XX " // Ensure safety with getOrNull
+                    }),
+                marker = rememberMarker(DefaultCartesianMarker.LabelPosition.AbovePoint)
+            ),
+            modelProducer,
+            scrollState = scrollState,
+            zoomState = zoomState,
+            modifier = Modifier // for entire graph
+                .fillMaxWidth()
+                .height(300.dp)
+                .then(Modifier.graphicsLayer { rotationZ = 0f })
+        )
+
+    }
+}
+
+/** Formats values to display as integers. */
+public fun integer(): CartesianValueFormatter = object : CartesianValueFormatter {
+    override fun format(
+        context: CartesianMeasuringContext,
+        value: Double,
+        verticalAxisPosition: Axis.Position.Vertical?,
+    ): CharSequence {
+        // Round the value to the nearest integer and return as a string
+        return value.toInt().toString()
+    }
+}
+
+
+/** Formats axes for the first graph **/
+@Composable
+fun AggregationChartAxesConfigurator(logsDateGroups: MutableList<String>, logsSizeSeries: MutableList<Int>?, singleChoiceSelectedIndex: Int):
+        Triple<VerticalAxis<Axis.Position.Vertical.Start>?, VerticalAxis<Axis.Position.Vertical.End>?, Pair<HorizontalAxis<Axis.Position.Horizontal.Top>?, HorizontalAxis<Axis.Position.Horizontal.Bottom>?>> {
+
+
+
+    val maxValue = logsSizeSeries?.maxOrNull() ?: 10 // Default maximum value
+    val stepSize = when {
+        maxValue <= 10 -> 1.0
+        maxValue <= 50 -> 5.0
+        else -> 10.0
+    }
+
+
+    var startAxisConfig: VerticalAxis<Axis.Position.Vertical.Start>? = VerticalAxis.rememberStart(
+//        valueFormatter = integer(),
+        valueFormatter = integer(),
+        tickLength = 5.dp,
+        itemPlacer = VerticalAxis.ItemPlacer.step({ _ -> stepSize } ), // Adjusts dynamically
+        label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+        titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface)
+    )
+    var endAxisConfig: VerticalAxis<Axis.Position.Vertical.End>? = null
+    var topAxisConfig: HorizontalAxis<Axis.Position.Horizontal.Top>? = null
+    var bottomAxisConfig: HorizontalAxis<Axis.Position.Horizontal.Bottom>? = HorizontalAxis.rememberBottom(
+        label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+        titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
+        labelRotationDegrees = 0f,
+        line = rememberAxisLineComponent(),
+        valueFormatter = CartesianValueFormatter { _, x, _ ->
+            logsDateGroups.getOrNull(x.roundToInt()) ?: " " // Ensure safety with getOrNull
+        },
+        itemPlacer = HorizontalAxis.ItemPlacer.aligned(spacing = 1), // Adjust spacing
+        title = "Hours",
+
+    )
+
+    when (singleChoiceSelectedIndex){
+        0 -> {
+//            startAxisConfig = VerticalAxis.rememberStart( valueFormatter = integer())
+            endAxisConfig =null
+//            topAxisConfig = HorizontalAxis.rememberTop( valueFormatter = integer())
+            bottomAxisConfig = HorizontalAxis.rememberBottom(
+                label = rememberAxisLabelComponent(color = MaterialTheme.colorScheme.onSurface),
+                titleComponent = rememberTextComponent(color = MaterialTheme.colorScheme.onSurface),
+                labelRotationDegrees = -90f,
+                line = rememberAxisLineComponent(),
+                valueFormatter = CartesianValueFormatter { _, x, _ ->
+                    logsDateGroups.getOrNull(x.roundToInt()) ?: " " // Ensure safety with getOrNull
+                }
+            )
+        }
+        1 -> {
+//            topAxisConfig.title = "Hours"
+        }
+        2 -> {
+//            topAxisConfig.title = "Days"
+//            bottomAxisConfig.title = "Weeks"
+        }
+        3 -> {
+//            topAxisConfig.title = "Months"
+//            bottomAxisConfig.title = "Years"
+        }
+    }
+
+
+    var axisConfig = Triple(startAxisConfig, endAxisConfig, Pair(topAxisConfig, bottomAxisConfig))
+    return axisConfig
+}
+
+
+
+fun logEntryAggregator (
+    singleChoiceSelectedIndex: Int,
+    logEntries: State<List<LogEntry>>,
+    selectedDateRange: Pair<Long?, Long?>,
+    showEmptyDaysChecked: Boolean
+): Pair<MutableList<String>?, MutableList<Int>?> {
+    // Switch case based on index 0,1,2,3 to determine different ways of aggregating logEntries
+
+    //Empty
+    val logsDateGroups = mutableListOf<String>() // Extract dates for labels
+    val logsSizeSeries = mutableListOf<Int>() // Extract values for the chart
+
+
+
+
+    when (singleChoiceSelectedIndex) {
+        0 -> {
+            // Hourly breakdown: Format as <Hour> <AM/PM>
+            logsDateGroups.clear()
+            logsSizeSeries.clear()
+            val dateFormat = SimpleDateFormat("MMM dd, HH:mm a", Locale.getDefault())
+            val groupedLogs = logEntries.value.groupBy { logEntry -> dateFormat.format(Date(logEntry.startTimestamp)) }
+
+            groupedLogs.forEach { (key, value) ->
+                // Extract date from the key, e.g., "Monday Nov 21, 2022" -> "Nov 21"
+                //val date = key.split(" ").get(0) + " " + key.split(" ").get(1).replace(",", "")
+                logsDateGroups.add(key)
+
+                // Add the size of the LogEntry list to logsSizeSeries
+                logsSizeSeries.add(value.size)
+            }
+
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+        1 -> {
+            // Daily breakdown: Format as <Month> <Day>
+            val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+            val allDates = mutableListOf<String>()
+            val logsDateGroups = mutableListOf<String>()
+            val logsSizeSeries = mutableListOf<Int>()
+
+            if (logEntries.value.isNotEmpty() && selectedDateRange.first != null && selectedDateRange.second != null) {
+                val startTimestamp = selectedDateRange.first!!
+                val endTimestamp = selectedDateRange.second!!
+
+                if (showEmptyDaysChecked) {
+                    // Show empty days (fill in with 0 for missing dates)
+                    val startDate = Calendar.getInstance().apply { time = Date(startTimestamp) }
+                    val endDate = Calendar.getInstance().apply { time = Date(endTimestamp) }
+
+                    // Generate all dates within the selected date range
+                    while (!startDate.after(endDate)) {
+                        allDates.add(dateFormat.format(startDate.time))
+                        startDate.add(Calendar.DATE, 1) // Increment by 1 day
+                    }
+
+                    // Group the logs by date within the selected range
+                    val groupedLogs = logEntries.value
+                        .filter { it.startTimestamp in startTimestamp..endTimestamp }
+                        .groupBy { logEntry ->
+                            dateFormat.format(Date(logEntry.startTimestamp))
+                        }
+
+                    // Fill in the logsDateGroups and logsSizeSeries, accounting for missing dates
+                    allDates.forEach { date ->
+                        logsDateGroups.add(date)
+                        logsSizeSeries.add(groupedLogs[date]?.size ?: 0) // Add 0 if no logs for the date
+                    }
+                } else {
+                    // Do not show empty days (only include days with data)
+                    val groupedLogs = logEntries.value
+                        .filter { it.startTimestamp in startTimestamp..endTimestamp }
+                        .groupBy { logEntry ->
+                            dateFormat.format(Date(logEntry.startTimestamp))
+                        }
+
+                    // Add only dates with data to the groups
+                    groupedLogs.forEach { (date, logs) ->
+                        logsDateGroups.add(date)
+                        logsSizeSeries.add(logs.size)
+                    }
+                }
+            }
+
+            Log.e("logsDateGroups", logsDateGroups.toString())
+            Log.e("logsSizeSeries", logsSizeSeries.toString())
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+        2 -> {
+            // Weekly breakdown: Format as <Month> <week start date> - <week end date>
+            logsDateGroups.clear()
+            logsSizeSeries.clear()
+            // Weekly breakdown: Format as <Month> <week start date> - <week end date>
+            val weekDateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+            val calendar = Calendar.getInstance()
+            val groupedLogs = logEntries.value.groupBy { logEntry ->
+                // Set the date to the start of the week (Sunday as the start)
+                calendar.time = Date(logEntry.startTimestamp)
+                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                weekDateFormat.format(calendar.time)
+            }
+
+            groupedLogs.forEach { (weekStart, value) ->
+                // Find the week end date (7 days after the week start)
+                calendar.time = SimpleDateFormat("MMM dd", Locale.getDefault()).parse(weekStart)
+                calendar.add(Calendar.DAY_OF_YEAR, 6) // Add 6 days to get the end of the week
+                val weekEnd = weekDateFormat.format(calendar.time)
+
+                // Combine week start and end date into one label
+                val label = "$weekStart - $weekEnd"
+                logsDateGroups.add(label)
+                logsSizeSeries.add(value.size)
+            }
+
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+        3 -> {
+            // Monthly breakdown: Format as <Month> (e.g., "Jan", "Feb")
+            logsDateGroups.clear()
+            logsSizeSeries.clear()
+            // Monthly breakdown: Format as <Month> (e.g., "Jan", "Feb")
+            val monthDateFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault()) // Include year to differentiate between same months in different years
+            val groupedLogs = logEntries.value.groupBy { logEntry ->
+                // Get only the month and year (e.g., "Jan 2024")
+                monthDateFormat.format(Date(logEntry.startTimestamp))
+            }
+
+            groupedLogs.forEach { (monthYear, value) ->
+                logsDateGroups.add(monthYear)  // Month (e.g., "Jan", "Feb") or "Jan 2024"
+                logsSizeSeries.add(value.size)  // Log count for that month
+            }
+
+            return Pair(logsDateGroups, logsSizeSeries)
+        }
+    }
+
+
+    return Pair(logsDateGroups, logsSizeSeries)
+}
+
