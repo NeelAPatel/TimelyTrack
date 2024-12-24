@@ -2,8 +2,6 @@
 
 package com.example.timelytrack.ui.history
 
-//import android.graphics.Color
-
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -26,14 +24,13 @@ import com.example.timelytrack.viewmodel.LogViewModel
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowRightAlt
+import androidx.compose.material.icons.automirrored.filled.ArrowRightAlt
+
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.runtime.State
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -42,7 +39,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.zIndex
 import com.example.timelytrack.model.LogEntry
 
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -67,7 +63,6 @@ import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
 import com.patrykandpatrick.vico.core.common.Fill
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -123,7 +118,7 @@ fun HistoryScreen() {
     var showSelectedDateRangeModal by remember { mutableStateOf(false) }
     var showDataVisibilityAdjustmentModal by remember { mutableStateOf(false) }
 
-    // Future Visbility modifiers
+    // Future Visibility modifiers
         // show Empty days?
     var showEmptyDaysChecked by rememberSaveable { mutableStateOf(false) }
 // Future Visibility modifiers
@@ -132,7 +127,7 @@ fun HistoryScreen() {
         // show All data?
 
     // For Aggregation Filter
-    var singleChoiceSelectedIndex by remember { mutableStateOf(1) } // default is daily
+    var singleChoiceSelectedIndex by rememberSaveable { mutableStateOf(1) } // default is daily
     val singleChoiceSelectorOptions = listOf("Hourly", "Daily", "Weekly", "Monthly")
 
     // === UI ====
@@ -147,8 +142,13 @@ fun HistoryScreen() {
                     selectedDateRange = selectedDateRange,
                     onDateRangeClick = {showSelectedDateRangeModal = true},
                     onDataVisibilityClick = {showDataVisibilityAdjustmentModal = true})
-                AggregationFilterSelectorComposable(singleChoiceSelectorOptions, singleChoiceSelectedIndex)
-
+                AggregationFilterSelectorComposable(
+                    singleChoiceSelectorOptions = singleChoiceSelectorOptions,
+                    singleChoiceSelectedIndex = singleChoiceSelectedIndex,
+                    onOptionSelected = { selectedIndex ->
+                        singleChoiceSelectedIndex = selectedIndex // Update the state
+                    }
+                )
                 if (showSelectedDateRangeModal) {
                     DateRangePickerModal(
                         initialDateRange = selectedDateRange, // Pass current range to modal
@@ -313,15 +313,13 @@ fun DataVisibilityAdjustmentModal(
 }
 
 @Composable
-private fun AggregationFilterSelectorComposable(
+fun AggregationFilterSelectorComposable(
     singleChoiceSelectorOptions: List<String>,
-    singleChoiceSelectedIndex: Int
+    singleChoiceSelectedIndex: Int,
+    onOptionSelected: (Int) -> Unit // Callback to update the selected index
 ) {
-    var singleChoiceSelectedIndex1 = singleChoiceSelectedIndex
     Row(
-        //center aligns content
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(), // Center aligns content
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -329,7 +327,6 @@ private fun AggregationFilterSelectorComposable(
             contentDescription = "Filter",
             modifier = Modifier.padding(start = 8.dp, end = 8.dp)
         )
-
 
         SingleChoiceSegmentedButtonRow(
             Modifier.fillMaxWidth(),
@@ -340,8 +337,8 @@ private fun AggregationFilterSelectorComposable(
                         index = index,
                         count = singleChoiceSelectorOptions.size
                     ),
-                    onClick = { singleChoiceSelectedIndex1 = index },
-                    selected = index == singleChoiceSelectedIndex1
+                    onClick = { onOptionSelected(index) }, // Update state in the parent
+                    selected = index == singleChoiceSelectedIndex
                 ) {
                     Text(label)
                 }
@@ -375,7 +372,7 @@ private fun DateRangeSelectorComposable(
 
             Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(selectedDateRange.first!!)))
             Icon(
-                Icons.Filled.ArrowRightAlt,
+                Icons.AutoMirrored.Filled.ArrowRightAlt,
                 contentDescription = "Right Arrow",
                 modifier = Modifier.padding(start = 8.dp, end = 8.dp)
             )
@@ -456,69 +453,13 @@ fun DateRangePickerModal(
 
         }
     }
-//
-//    Dialog(onDismissRequest = onDismiss
-//    ) {
-//        Box(
-//            modifier = Modifier
-//                .fillMaxSize() // Ensure the dialog content uses full available space
-//                .background(MaterialTheme.colorScheme.background) // Set background color to match the theme
-//        ) {
-//            Scaffold(
-//            topBar = {
-//                TopAppBar(
-//                    title = { Text("Select Date Range") },
-//                    navigationIcon = {
-//                        IconButton(onClick = onDismiss) {
-//                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-//                        }
-//                    },
-//                    actions = {
-//                        TextButton(
-//                            onClick = {
-//                                onDateRangeSelected(
-//                                    Pair(
-//                                        dateRangePickerState.selectedStartDateMillis?.plus(24L * 60 * 60 * 1000),
-//                                        dateRangePickerState.selectedEndDateMillis?.plus(24L * 60 * 60 * 1000)
-//                                    )
-//                                )
-//                                onDismiss()
-//                            }
-//                        ) {
-//                            Text("Apply")
-//                        }
-//                    }
-//                )
-//            }
-//        ) { paddingValues ->
-//            Column(
-//                modifier = Modifier
-//                    .fillMaxSize()
-//                    .padding(paddingValues)
-//            ) {
-//                DateRangePicker(
-//                    state = dateRangePickerState,
-//                    title = {
-//                        Text(
-//                            text = "Select date range",
-//                            modifier = Modifier.padding(16.dp)
-//                        )
-//                    },
-//                    showModeToggle = false,
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .weight(1f)
-//                )
-//            }
-//        }
-//    }}
 
 }
 
 @Composable
 fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>, selectedDateRange: Pair<Long?, Long?>, showEmptyDaysChecked: Boolean) {
 
-    var (logsDateGroups, logsSizeSeries) = logEntryAggregator(
+    val (logsDateGroups, logsSizeSeries) = logEntryAggregator(
         singleChoiceSelectedIndex,
         logEntries,
         selectedDateRange, showEmptyDaysChecked
@@ -543,7 +484,7 @@ fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogE
         val zoomState = rememberVicoZoomState(/* ... */)
 
 
-        var axisConfig = AggregationChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
+        val axisConfig = AggregationChartAxesConfigurator(logsDateGroups, logsSizeSeries, singleChoiceSelectedIndex)
 
         val startAxisConfig = axisConfig.first
         val endAxisConfig = axisConfig.second
@@ -582,8 +523,6 @@ fun AggregationChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogE
         Text("No data to display")
     }
 }
-
-
 
 @Composable
 fun HourlyDistributionChart(singleChoiceSelectedIndex: Int, logEntries: State<List<LogEntry>>) {
@@ -774,7 +713,7 @@ fun logEntryAggregator (
     selectedDateRange: Pair<Long?, Long?>,
     showEmptyDaysChecked: Boolean
 ): Pair<MutableList<String>?, MutableList<Int>?> {
-    // Switch case based on index 0,1,2,3 to determine different ways of aggegating logEntries
+    // Switch case based on index 0,1,2,3 to determine different ways of aggregating logEntries
 
     //Empty
     val logsDateGroups = mutableListOf<String>() // Extract dates for labels
@@ -852,25 +791,6 @@ fun logEntryAggregator (
                 }
             }
 
-            Log.e("logsDateGroups", logsDateGroups.toString())
-            Log.e("logsSizeSeries", logsSizeSeries.toString())
-            return Pair(logsDateGroups, logsSizeSeries)
-        }
-        -1 -> {
-            // Daily breakdown: Format as <Month> <Day>
-            logsDateGroups.clear()
-            logsSizeSeries.clear()
-            val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
-            val groupedLogs = logEntries.value.groupBy { logEntry -> dateFormat.format(Date(logEntry.startTimestamp)) }
-
-            groupedLogs.forEach { (key, value) ->
-                // Extract date from the key, e.g., "Monday Nov 21, 2022" -> "Nov 21"
-                val date = key.split(" ").get(0) + " " + key.split(" ").get(1).replace(",", "")
-                logsDateGroups.add(date)
-
-                // Add the size of the LogEntry list to logsSizeSeries
-                logsSizeSeries.add(value.size)
-            }
             Log.e("logsDateGroups", logsDateGroups.toString())
             Log.e("logsSizeSeries", logsSizeSeries.toString())
             return Pair(logsDateGroups, logsSizeSeries)
