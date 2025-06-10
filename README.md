@@ -16,7 +16,7 @@ A sleek, modern Android application that lets users log and visualize duration-b
   Add, group, and manage time logs with a single tap. Swipe to delete, long-press to multi-select, or edit via a bottom sheet.
 
 - 📊 **History Screen**  
-  Dynamic charts powered by [Vico](https://github.com/Patryk27/Vico) show event frequency across days, weeks, hours, and months. Includes a date range selector and visibility filters.
+  Dynamic charts powered by [Vico](https://github.com/patrykandpatrick/vico) show event frequency across days, weeks, hours, and months. Includes a date range selector and visibility filters.
 
 - 📁 **Persistent Storage**  
   Uses Room for local storage of logs and supports complete CRUD operations.
